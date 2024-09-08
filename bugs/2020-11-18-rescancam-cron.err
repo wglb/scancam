@@ -1,0 +1,29 @@
+GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Invalid JPEG file structure: two SOI markersGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Not a JPEG file: starts with 0x00 0x00Unhandled USOCKET:NS-TRY-AGAIN-CONDITION in thread #<SB-THREAD:THREAD "main thread" RUNNING {1000B40083}>: Condition USOCKET:NS-TRY-AGAIN-CONDITION was signalled.
+
+Backtrace for: #<SB-THREAD:THREAD "main thread" RUNNING {1000B40083}>
+0: (SB-DEBUG::DEBUGGER-DISABLED-HOOK #<USOCKET:NS-TRY-AGAIN-CONDITION {10054A7CD3}> #<unused argument> :QUIT T)
+1: (SB-DEBUG::RUN-HOOK SB-EXT:*INVOKE-DEBUGGER-HOOK* #<USOCKET:NS-TRY-AGAIN-CONDITION {10054A7CD3}>)
+2: (INVOKE-DEBUGGER #<USOCKET:NS-TRY-AGAIN-CONDITION {10054A7CD3}>)
+3: (ERROR USOCKET:NS-TRY-AGAIN-CONDITION :SOCKET NIL)
+4: (USOCKET::HANDLE-CONDITION #<SB-BSD-SOCKETS:TRY-AGAIN-ERROR {10054A7C33}> NIL "www.ruralnetwork.net")
+5: (SB-KERNEL::%SIGNAL #<SB-BSD-SOCKETS:TRY-AGAIN-ERROR {10054A7C33}>)
+6: (ERROR SB-BSD-SOCKETS:TRY-AGAIN-ERROR :ERRNO -3 :SYSCALL "getaddrinfo")
+7: (SB-BSD-SOCKETS:NAME-SERVICE-ERROR "getaddrinfo" -3)
+8: (SB-BSD-SOCKETS:GET-HOST-BY-NAME #<unavailable argument>)
+9: (USOCKET:GET-HOSTS-BY-NAME "www.ruralnetwork.net")
+10: (USOCKET:SOCKET-CONNECT "www.ruralnetwork.net" 80 :PROTOCOL :STREAM :ELEMENT-TYPE (UNSIGNED-BYTE 8) :TIMEOUT 10 :DEADLINE NIL :NODELAY T :LOCAL-HOST NIL :LOCAL-PORT NIL)
+11: ((LABELS DEXADOR.BACKEND.USOCKET::MAKE-NEW-CONNECTION :IN REQUEST) #<URI-HTTP http://www.ruralnetwork.net/~yellowpinecm/airport.jpg>)
+12: (REQUEST #<unavailable argument> :METHOD :GET)
+13: ((FLET "FORM-FUN-4" :IN GET-ONE-GLACIER-PARK))
+14: (GET-ONE-GLACIER-PARK ("johnson-creek" . "http://www.ruralnetwork.net/~yellowpinecm/airport.jpg"))
+15: (GET-ALL-GLACIER)
+16: (TRY-THREE NIL "rwis-cams.lsp")
+17: ((LAMBDA NIL :IN DISPATCH-RESCANCAM))
+18: (SB-EXT:CALL-WITH-TIMING #<FUNCTION SB-IMPL::PRINT-TIME> #<CLOSURE (LAMBDA NIL :IN DISPATCH-RESCANCAM) {1002F5A2CB}>)
+19: (DISPATCH-RESCANCAM ("/home/wgl/bin/rescancam"))
+20: (DISPATCH-RESCANCAM-TOP)
+21: ((FLET SB-UNIX::BODY :IN SB-EXT:SAVE-LISP-AND-DIE))
+22: ((FLET "WITHOUT-INTERRUPTS-BODY-14" :IN SB-EXT:SAVE-LISP-AND-DIE))
+23: ((LABELS SB-IMPL::RESTART-LISP :IN SB-EXT:SAVE-LISP-AND-DIE))
+
+unhandled condition in --disable-debugger mode, quitting

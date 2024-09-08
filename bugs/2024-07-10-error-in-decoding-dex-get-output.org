@@ -1,0 +1,23 @@
+GD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Didn't expect more than one scanGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileGD Warning: gd-jpeg: JPEG library reports unrecoverable error: Empty input fileUnhandled TYPE-ERROR in thread #<SB-THREAD:THREAD "main thread" RUNNING
+                                  {1004C30093}>:
+  The value
+    (:NOT-HTML :SSL DEX-GET::FAILURE)
+  is not of type
+    (OR STRING PATHNAME SYNONYM-STREAM FILE-STREAM)
+  when binding SB-KERNEL:FILENAME
+
+Backtrace for: #<SB-THREAD:THREAD "main thread" RUNNING {1004C30093}>
+0: (OPEN (:NOT-HTML :SSL DEX-GET::FAILURE) :DIRECTION :INPUT) [more]
+1: ((:METHOD PARSE-HTML (T)) #<unavailable argument> :CALLBACK-ONLY NIL :CALLBACKS NIL :COLLECT-ROGUE-TAGS NIL :NO-BODY-TAGS NIL :PARSE-ENTITIES NIL) [fast-method]
+2: (GET-RWIS-HOME-PAGE "current-new" "https://app.mdt.mt.gov/atms/public/cameras")
+3: (TRY-PENDROY-NEW)
+4: (TRY-THREE NIL)
+5: ((LAMBDA NIL :IN DISPATCH-RESCANCAM))
+6: (SB-EXT:CALL-WITH-TIMING #<FUNCTION SB-IMPL::PRINT-TIME> #<FUNCTION (LAMBDA NIL :IN DISPATCH-RESCANCAM) {1BC513487BDB}>)
+7: (DISPATCH-RESCANCAM ("/home/wgl/bin/rescancam"))
+8: (DISPATCH-RESCANCAM-TOP)
+9: ((FLET SB-UNIX::BODY :IN SB-IMPL::START-LISP))
+10: ((FLET "WITHOUT-INTERRUPTS-BODY-3" :IN SB-IMPL::START-LISP))
+11: (SB-IMPL::%START-LISP)
+
+unhandled condition in --disable-debugger mode, quitting

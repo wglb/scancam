@@ -1,0 +1,15 @@
+* Items [0/2]
+  - [ ] fix the directory conventions and file handlint conventions throughout
+  - [ ] Google flags
+  - [ ] for detect stars, use exclusions. And set convention of naming of exclusions directory
+
+* Current [1/2]
+  - [X] Write a summary file that shows how many images for each site
+
+
+* Convert to dex
+- convert URI to QURI
+- headcers is a hash table. force user agent: see ~/quicklisp/dists/quicklisp/software/dexador-20180328-git/README.markdown
+
+* New mods to configure
+  - test that it didn't break this.
