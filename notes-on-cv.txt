@@ -1,0 +1,3 @@
+Youtube thingey: https://www.youtube.com/watch?v=m_ytVKMqm-k
+get it working: https://www.reddit.com/r/lisp/comments/2nfgf8/has_anyone_managed_to_get_opencv_working/
+
