@@ -24,3 +24,6 @@ bump
 /.emacs.desktop*
 /nrescancam
 all
+push-both.sh
+unfiled-directory-count.txt
+scancam

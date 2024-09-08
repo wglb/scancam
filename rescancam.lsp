@@ -1,0 +1,20 @@
+((:AVERAGE . 29) 
+ (:SAMENESS . 10)
+ (:not-interesting . "none")
+ (:file-away . :true)
+ (:rwis-cams . "rwis-cams.lsp")
+ (:vermont-cams . "vermont-cams.lsp")
+ (:glacier-cams . "glacier-cams.lsp")
+ (:kitt-peak-cams . "kitt-peak-cams.lsp")
+ (:arizona . "arizona")
+ (:all-cams   :glacier-cams :arizona-cams  :vermont-cams :kitt-peak-cams)
+ (:cams-on-hold :rwis-cams)
+ (:arizona-cams . "arizona.lsp")
+ (:astronomy-delt . 8)
+ (:cluster-limit . 100)
+ (:astronomy-thresh . 81)
+ (:cluster-limit . 100)
+ (:overlap-threshold . 149))
+
+
+
