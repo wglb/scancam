@@ -5,7 +5,8 @@
   :description "scan some road cameras"
   :author "Ciex, Incorporated"
   :license "Copyright Ciex,Incorporated(c) 2014, All rights reserved"
-  :depends-on (#:cl-html-parse
+  :depends-on (#:xlog
+			   #:cl-html-parse
 			   #:com.google.flag
                #:flexi-streams
                #:cl-base64
@@ -19,12 +20,11 @@
                #:dup-images-by-hash
 			   #:move-files
 			   #:configuration-r
-			   #:replace-all
+			   #:str
                #:lock-and-trigger
-			   #:dex-get
-               #:xlog)
+			   #:dex-get)
     
-  :version "2.16.2"
+  :version "2.16.3"
   :components ((:file "scancam-package")
 			   (:file "scancam-tools")
                (:file "dispatch")

@@ -2,8 +2,6 @@
 
 (in-package #:scancam)
 
-;;; "scancam" goes here. Sunsets and sunrises, ahoy!
-
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
 (defparameter *pendroy-base* "http://rwis.mdt.mt.gov/scanweb/Camera.asp?Pageid=Camera&Units=English&Groupid=301000&Siteid=301001&Senid=&Wxid=3011&Mapid=&DisplayClass=Java&SenType=All&HEndDate=&Zoneid=&Mode=&Sprayerid=&Dvid=&CD=9%2F12%2F2013+7%3A46%3A34+PM")

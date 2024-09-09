@@ -4,16 +4,16 @@
 
 (defpackage #:scancam
   (:use #:cl
+		#:xlog
 		#:move-files
         #:cl-base64
         #:flexi-streams 
-        #:xlog
 		#:com.google.flag
         #:dex
 		#:dex-get
 		#:cl-html-parse
         #:dup-images-by-hash
-        #:replace-all
+#+nil        #:replace-all
         #:lock-and-trigger
 		#:configuration-r
 		#:tokens
@@ -21,6 +21,7 @@
         #:quri
 		#:com.google.flag
 		#:iolib/sockets
+		#:str
 		#:osicat)
     
   (:shadowing-import-from :dex :get :delete)

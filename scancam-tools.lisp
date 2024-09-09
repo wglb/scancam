@@ -48,7 +48,7 @@
   "Is s nil or the empty string ?"
   (empty? s))
 
-(defun digitp (s)
+#+nil (defun digitp (s)
   "Return t if `s' contains at least one character and all characters are numerical. Stolen from :str package"
   (unless (emptyp s)
     ;; regex ? Check sign and exponents.
