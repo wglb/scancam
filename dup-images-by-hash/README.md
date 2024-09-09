@@ -1,5 +1,5 @@
 # dup-images-by-hash
-### _Your Name <your.name@example.com>_
+### _wglb wgl@ciex-security.com_
 
 Find duplicates by hash, prepare to remove
 
