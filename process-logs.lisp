@@ -19,7 +19,6 @@
 			   (string= lst "logs"))
 		   t))
 	 
-	 
 	 t
 	 #'(lambda (dir) 
 		 (when (string= "logs" (car (last (pathname-directory dir))))
