@@ -945,7 +945,8 @@
 		   (restore-rwis-home-page base))
 
 		  (t (let ((ppbody (parse-html pbody)))
-			   (setf *saved-home-page* (write-sexp-lsp ppbody (format nil "rwis-cameras-new-~a.lsp" base))))))) 
+			   (setf *saved-home-page* (write-sexp-lsp ppbody (format nil "rwis-cameras-new-~a.lsp" base)))
+			   (write-sexp-lsp ppbody (format nil "rwis-cameras-new-~a.lsp" (dates-ymd :ym))))))) 
   
   (length *saved-home-page*))
 
