@@ -284,7 +284,7 @@
 	  ;; /home/data6/webcams/pendroy/scancam/Ekalaka-S323-MP-46_8/delete-darkness/marked-images/exclude/
 
 
-(defun detect-stars-new (arg)
+#+nil (defun detect-stars-new (arg)
   "Detect stars in directory specified by *directory*, ignoring the arg"
   (cond  (arg
 		  (xlogntf "detect-stars-new: Unexpected args. Processing halted ~s" arg))
