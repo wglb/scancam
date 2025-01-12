@@ -230,7 +230,7 @@
 			  (write-image-to-file new-file-name :image new-image :if-exists :supersede)))
 		  )))))
 
-#+nil (defun calc-average-debug (fn)
+ (defun calc-average-debug (fn)
   (xlogntf "cad: calcing on ~a size ~a" (probe-file fn) (sb-posix:stat-size (sb-posix:stat fn)))
   (with-image-from-file (img fn :jpg)
 		(multiple-value-bind (width height)
@@ -320,7 +320,7 @@
 					(incf rgb3-sum rgb3)					
 					(incf sum bright)
 					(incf deltas delta)))))
-			(let* ((avg (/ sum wxh))
+			(let* ((avg (/ sum wxh 1.0d0))
 				   (delts (/ deltas wxh))
 				   (rgb1a (/ rgb1-sum wxh))
 				   (rgb2a (/ rgb2-sum wxh))
@@ -344,16 +344,20 @@
 						 (rgb2d (ldb (byte 8 8) pixd ))
 						 (rgb3d (ldb (byte 8 0) pixd )))
 					(declare (fixnum pix pixr pixd rgb1 rgb2 rgb3 rgb1r rgb2r rgb3r rgb1d rgb2d rgb3d ))
-					(incf delta-right (the fixnum (+ 
+					#+nil (incf delta-right (the fixnum (+ 
 												   (abs (- rgb1 rgb1r))
 												   (abs (- rgb2 rgb2r))
 												   (abs (- rgb3 rgb3r)))))
+					(incf delta-right (+ 
+									   (abs (- rgb1 rgb1r))
+									   (abs (- rgb2 rgb2r))
+									   (abs (- rgb3 rgb3r))))
 					(incf delta-down (+ 
 									  (abs (- rgb1 rgb1d))
 									  (abs (- rgb2 rgb2d))
 									  (abs (- rgb3 rgb3d)))))))
 			  (setf total-delta (+ delta-right delta-down))
-			  (list avg delts rgb1a rgb2a rgb3a (/ delta-right wxh) (/ delta-down wxh) (/ total-delta wxh) wxh sum)))))
+			  (list avg delts rgb1a rgb2a rgb3a (/ delta-right wxh 1.0d0) (/ delta-down wxh 1.0d0) (/ total-delta wxh 1.0d0) wxh sum)))))
 	(error (e)
 	  (xlogntft "ca: error: library does not like ~A, size ~a" (probe-file fn)   e)
 	  (xlogff "prepare for oops")
