@@ -90,7 +90,7 @@
   (xlogntft (generate-usage-string)))
 
 (defparameter *dispatch*
-  (list (cons :scancam 'try-three-new)
+  (list (cons :scancam 'try-three)
 		(cons :scancam-test 'try-three-alt)
 		(cons :find-time-gaps 'find-time-gaps-c)
 		(cons :del-dark-files 'dark-files-archive-directories)
@@ -145,12 +145,12 @@
 	   (progn
 		 (xlogntf "Dispatch, eh, and args are ~s" arg)
 		 (setf *command-line* arg)
-		 (if (zerop (length *directory* ))
+		 (if (zerop (length *directory*))
 			 (setf *directory-use* (namestring *default-pathname-defaults*))
 			 (setf *directory-use* *directory*))
 		 (let ((newargs (parse-command-line (rest arg))))
 		   (setf *command-line-args* newargs)
-		   (debugc 5 (xlogntf "Dispach, parsed args are ~s, options are ~s" newargs (show-opts)))
+		   (debugc 5 (xlogntf "dis: dbg: Dispach, parsed args are ~s, options are ~s" newargs (show-opts)))
 		   (xlogntf "Operation is ~s" *process*)
 		   (cond (*help*
 				  (xlogntft "~a" (generate-usage-string))
