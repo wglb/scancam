@@ -264,7 +264,7 @@
 	(let ((*trace-output* (the-log-file)))
 	  (time
 	   (mapc #'(lambda (cam)
-			(delete-dark-files-directory (concatenate (car cam) date)))
+			(delete-dark-files-directory (concatenate 'string (car cam) date)))
 		  (images-by-camera))))))
 
 #+nil
