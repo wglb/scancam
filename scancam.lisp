@@ -126,13 +126,15 @@
 
 (defun get-config-rescan (dr prop &key (debug nil))
   "get config from scancam.lsp. dr is either relative or absolute directory name. Save dir and pathname in hash"
-  (let* ((dir (uiop:ensure-directory-pathname dr ))
+  (let* ((dir (uiop:ensure-directory-pathname dr))
 		 (cfn (make-pathname :name "rescancam" :type "lsp"))
 		 (configpn (merge-pathnames dir (make-pathname :name "rescancam" :type "lsp"))))
+	(if (not (probe-file configpn))
+		(xlogntf "gcr: no config file at ~s" configpn))
 	(let ((ckey (car (last (pathname-directory dr)))))
 	  (debugc 5 (xlogntf "gcr: setting hash: index ~s value ~s" ckey configpn))
 	  (if ckey
-		  (setf (gethash ckey  *all-config-files* nil) configpn)))
+		  (setf (gethash ckey *all-config-files* nil) (probe-file configpn))))
 	(let ((ans (get-config cfn prop :dir dir :debug  debug)))
 	  (if debug (xlogntft "gcr: cfn ~s ans is ~s type is ~s" cfn ans (type-of ans)))
 	  (if (eql (type-of ans) 'SYMBOL)
@@ -149,8 +151,7 @@
 
 (defun chk-for-delete-darkness (long-fn)
   "Calculate the average darkness and decide based on configuration value of threshold whether it goes to dark files. If threshold not specified, don't file dark files away"
-  ;; TODO break this sucker up
-  (xlogntf "cfdd: long-fn ~s" long-fn)
+  (debugc 5 (xlogntf "cfdd: long-fn ~s" long-fn))
   (if (probe-file long-fn)
 	  (handler-case
 		  (let* ((average (calc-average long-fn))
@@ -205,7 +206,8 @@
 			(list average rv delete-count))
 		(error (ouch)
 		  (xlogntf "cfdd: Boom: ~a on cfdd for file ~s" ouch long-fn)
-		  nil))))
+		  nil))
+	  nil))
 
 (defun slashes-to-hyphens (str)
   (let* ((ans (replace-all (uiop:native-namestring str) "/" "-"))
@@ -214,15 +216,16 @@
 		(subseq ans 0 l-1)
 		ans)))
 
+
 (defun delete-dark-files-directory (&optional (dir "."))
+  " TODO: call this in separate thread independent of main"
   (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
 		 (summary nil)
 		 (highest 0)
 		 (lowest (expt 2 24))
 		 (local-deleted 0)
 		 (darkness-th (get-darkness-threshold full-dir-namestring))
-		 (full nil)
-		 )
+		 (full nil))
 	(xlogntf "full-dir-namestring is ~s" full-dir-namestring)
 	(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
 	(with-open-log-file ((format nil "ddarkfi-dir~a" (slashes-to-hyphens full-dir-namestring))
@@ -238,23 +241,35 @@
 			  (let* ((answ (chk-for-delete-darkness nf))
 					 (ans (first answ))
 					 (text (second answ)))
-				(incf local-deleted (third answ))
+				(if (third answ)
+					(incf local-deleted (third answ)))
+				
 				(if text
 					(push text summary))
 				
-				(if ans
+				(if answ
 					(let* ((avg (first ans)))
 					  (if (and avg (< avg lowest))
 						  (setf lowest avg))
 					  (if (and avg (> avg highest))
 						  (setf highest avg)))))))
-		(xlogntf "ddfd: we have ~a images to check" (length full))
-		(xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) ))
+	  (xlogntf "ddfd: we have ~a images to check" (length full))
+	  (xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) ))
 	(xlogntf "ddfd: low=~a high=~a" lowest highest)
-	(xlogntf "ddfd: There were ~a dark files deleted" local-deleted)
+	(xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) )
 	nil))
 
+(defun delete-prod-darkfiles (&optional (date ""))
+  (with-open-log-file ("delete-darkfiles-batch" :show-log-file-name nil)
+	(let ((*trace-output* (the-log-file)))
+	  (time
+	   (mapc #'(lambda (cam)
+			(delete-dark-files-directory (concatenate (car cam) date)))
+		  (images-by-camera))))))
+
+#+nil
 (defun dark-files-archive-directories (&optional (which "."))
+  "This is incomplete. doesnot appar to descend down to y/m/d"
   (let ((dirl (if (consp which)
 				  which
 				  (list which))))
@@ -283,7 +298,8 @@
 		  (with-open-file (fo long-fn :direction :output :if-exists :supersede
 									  :element-type '(unsigned-byte 8))
 			(write-sequence body fo))
-		  (chk-for-delete-darkness long-fn))
+		  ;;(chk-for-delete-darkness long-fn)
+		  ) ;; TODO : move this to independent processor; do it by directory, perhaps hourly.
 	  (error (q)
 		(progn (xlogf "oh, we are error, q~s" q)
 			   (xlogntf "wif: botch on delete darkness for ~a~%error ~a" long-fn q))))))
@@ -379,6 +395,7 @@
 	(with-open-log-file ((format nil "~a-~a" "rwis-glacier" (car pair)) :dir the-directory  :show-log-file-name t) ;; too many  logs before :dates :hms
 	  (log-version-number (format nil "get-one-glacier-park ~a" (car pair)))
 	  (xlogf "g1: ==== get-one-glacier-park ~a" (car pair))
+	  (get-config-rescan (car pair) :average)
 	  (incf *cameras-polled*)
 	  (let* ((uri (cdr pair))
 			 (rv nil)
@@ -424,7 +441,8 @@
 (defun get-wh-marina ()
   (let* ((ans (dex-get (uri "https://www.earthcam.com/cams/includes/image.php?logo=0&playbutton=0&s=1&img=g7tDudP%2F7yBUDfCACguaJQ%3D%3D&202308211200") :binary t))
 		 (relm `(:relative "wh-marina"))
-		(fn (make-pathname :name (file-format-time "wh-marina") :directory relm :type "jpg")))
+		 (fn (make-pathname :name (file-format-time "wh-marina") :directory relm :type "jpg")))
+	(get-config-rescan "wh-marina" :average)
 	(with-open-log-file  ("marina" :dates t :dir relm)
 	  (xlogf "gwm: size ~s" (length (dexans-body ans)))
 	  (let* ((headers (dexans-headers ans))
@@ -498,25 +516,25 @@
 
 (defun time-to-run ()
   (let* ((hour-minute (get-hour-minute))
-		(last-run (probe-file ".last-run"))
-		(last-time-run (if last-run
-						   (with-open-file (fi last-run)
-							 (read fi))
-						   nil))
-		(elapsed (if  (and last-time-run (consp last-time-run ) ) ;; TODO check if this .last-run is a list
-					 (+ (- (second hour-minute) (second last-time-run)) (* 60 ( - (first hour-minute) (first last-time-run))))
-					 nil))
-		(time-to-run (if elapsed
-						 (or (not last-time-run)
-							 (> elapsed 12)
-							 (not (plusp elapsed)))
-						 t)))
+		 (last-run (probe-file ".last-run"))
+		 (last-time-run (if last-run
+							(with-open-file (fi last-run)
+							  (read fi))
+							nil))
+		 (elapsed (if  (and last-time-run (consp last-time-run ) ) ;; TODO check if this .last-run is a list
+					   (+ (- (second hour-minute) (second last-time-run)) (* 60 ( - (first hour-minute) (first last-time-run))))
+					   nil))
+		 (time-to-run (if elapsed
+						  (or (not last-time-run)
+							  (> elapsed 12)
+							  (not (plusp elapsed)))
+						  t)))
 	(xlogntf "our last run  was ~a and cur time is ~a elapsed is ~a" last-time-run hour-minute elapsed)
 	(debugc 5 (if last-time-run
 				  (xlogntf "t3: diff is ~a" elapsed)))
 	(cond (time-to-run
 		   (with-open-file (fo ".last-run" :direction :output :if-exists :supersede :if-does-not-exist :create) ;; TODO simplify this code
-						(write hour-minute :stream fo)))
+			 (write hour-minute :stream fo)))
 		  (t (xlogntf "t3: Not running RWIS this time, elapsed is ~a" elapsed)))
 	time-to-run))
 
@@ -573,65 +591,68 @@
 			   cfh)
 	  (write *images-by-camera* :stream fo))))
 
-(defun try-three (&optional (alternate-log-file-name nil))
+(defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
+  "Pull images from all cameras. If rwis is set, process those cameras"
   (declare (ignorable alternate-log-file-name))
   (setf *images-by-camera* nil)
   (images-by-camera :reset nil)
   (setf *all-config-files* nil)
   (restore-config-file-list)
-  (with-open-log-file ((if alternate-log-file-name
-						   alternate-log-file-name
-						   "try3")
-					   :show-log-file-name t) ;; was :dates :hms; too many logs
-	
-	(set-alert-file-name "scancam")
-	(log-version-number "t3:==================== scancam (try-three) ")
-	(setf *images-pulled* 0)
-	(setf *dark-images-deleted* 0)
-	(xlogf "Begin run")
-	(cond ((lockme "scancam")
-		   (xalertf "t3: locked ok")
-		   (xalertf "t3: running ~a" (version-number-string "t3"))
-		   (let* ((*print-pretty* nil))
-			 (do-kitt-peak-cams)
-			 (do-vermont-cams)
-			 (get-all-glacier)
-			 (try-one-arizona)
-			 (when (time-to-run)
-			   (get-wh-marina) ;; let's calibrate the interval 
-			   (try-pendroy-new)
-			   (do-we-need-to-delete-duplicates *images-by-camera*))
-			 (unlockme "scancam"))
-		   (xalertf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
-					*images-pulled*
-					*dark-images-deleted*
-					*duplicate-images-deleted*
-					*similar-images-deleted*
-					*cameras-polled*
-					*errors-encountered*
-					*astronomy-images-found*
-					*uninteresting-files-deleted*
-					(version-number-string "img")))
-		  
-		  (t 
-		   (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))))
-	(save-config-file-list)
-	(xlogntf "t3: successful exit"))
-  
-  (xlogf "scancam (try-three) done ~a" (version-number-string "try-three"))
-  (xlogntf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
-		   *images-pulled*
-		   *dark-images-deleted*
-		   *duplicate-images-deleted*
-		   *similar-images-deleted*
-		   *cameras-polled*
-		   *errors-encountered*
-		   *astronomy-images-found*
-		   *uninteresting-files-deleted*
-		   (version-number-string "img")) 
-  (images-by-camera)
-  (write-unfiled-count (map 'list 'first *images-by-camera*))
-  (xlogf "End of run"))
+  (let ((rv t))
+	(with-open-log-file ((if alternate-log-file-name
+							 alternate-log-file-name
+							 "try3")
+						 :show-log-file-name t) ;; was :dates :hms; too many logs
+	  
+	  (set-alert-file-name "scancam")
+	  (log-version-number "t3:==================== scancam (try-three) ")
+	  (setf *images-pulled* 0)
+	  (setf *dark-images-deleted* 0)
+	  (xlogf "Begin run")
+	  (cond ((lockme "scancam")
+			 (xalertf "t3: locked ok")
+			 (xalertf "t3: running ~a" (version-number-string "t3"))
+			 (let* ((*print-pretty* nil))
+			   (do-kitt-peak-cams)
+			   (do-vermont-cams)
+			   (get-all-glacier)
+			   (try-one-arizona)
+			   (when (or (time-to-run) run-rwis)
+				 (get-wh-marina) ;; let's calibrate the interval 
+				 (try-pendroy-new)
+				 (do-we-need-to-delete-duplicates *images-by-camera*))
+			   (unlockme "scancam"))
+			 (xalertf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
+					  *images-pulled*
+					  *dark-images-deleted*
+					  *duplicate-images-deleted*
+					  *similar-images-deleted*
+					  *cameras-polled*
+					  *errors-encountered*
+					  *astronomy-images-found*
+					  *uninteresting-files-deleted*
+					  (version-number-string "img")))
+			
+			(t 
+			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
+			 (setf rv nil)))
+	  
+	  (save-config-file-list))
+	(xlogf "scancam (try-three) done ~a" (version-number-string "try-three"))
+	(xlogntf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
+			 *images-pulled*
+			 *dark-images-deleted*
+			 *duplicate-images-deleted*
+			 *similar-images-deleted*
+			 *cameras-polled*
+			 *errors-encountered*
+			 *astronomy-images-found*
+			 *uninteresting-files-deleted*
+			 (version-number-string "img")) 
+	(images-by-camera)
+	(write-unfiled-count (map 'list 'first *images-by-camera*))
+	(xlogf "End of run")
+	rv))
 
 (defun try-three-alt (args)
   (cond (args
@@ -669,7 +690,7 @@
 						(xlogntf "eodc: Going to ~s for deletion" newpn)
 						(remove-duplicates-by-hash newpn)))
 					(compare-directory camera-directory)))
-				(delete-uninteresting-mass )
+				(delete-uninteresting-mass)
 				(file-away-auxiliary-mass)))))
 		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
 	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
@@ -799,7 +820,7 @@
   longfn
   nil)
 
-(defun delete-uninteresting-file-old (longfn)
+#+nil (defun delete-uninteresting-file-old (longfn)
   "determine if this is an uninteresting file. if so, move the sucker. Answer true if moved"
   ;; TODO finish.
   (let* ((dir (directory-namestring longfn))
@@ -824,7 +845,7 @@
 (defun delete-uninteresting (dir)
   dir)
 
-(defun delete-uninteresting-old (dir)
+#+nil (defun delete-uninteresting-old (dir)
   "Delete uninteresting files from directory. TODO: this logic really sucks"
   (let* ((fancy-name (format nil "dun-~a" (slashes-to-hyphens dir)))
 		 (regexp-uninteresting nil)
@@ -1084,6 +1105,7 @@
 		 (dirx (calc-dir-from-tokens tokes))
 		 (pfn (calc-path dirx)))
 	#+nil (break "which  ~s~%uri    ~s~%dir   ~s fn ~s~%" which  path dirx pfn)
+	(get-config-rescan `(:relative ,(first dirx)) :average)
 	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
 	  (pull-rwis (cons pfn (uri the-url))))
 	(first dirx)))

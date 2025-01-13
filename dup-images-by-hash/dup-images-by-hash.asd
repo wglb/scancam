@@ -12,6 +12,8 @@
                #:xlog)
   :version "1.1.3"  
   :components ((:file "dup-images-by-hash-package")
-               (:file "dup-images-by-hash")))
+               (:file "dup-images-by-hash")
+			   (:file "dup-images-by-hash-cl")))
+
 
 

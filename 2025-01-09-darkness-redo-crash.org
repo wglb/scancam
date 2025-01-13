@@ -1,0 +1,86 @@
+The value
+  (72204319/921600 0 72204319/921600 72204319/921600
+   72204319/921600 1863187/102400 424011/20480 1991621/51200
+   921600 72204319)
+
+is not of type
+  REAL
+   [Condition of type TYPE-ERROR]
+
+Restarts:
+ 0: [RETRY] Retry SLIME REPL evaluation request.
+ 1: [*ABORT] Return to SLIME's top level.
+ 2: [ABORT] abort thread (#<THREAD tid=3214438 "repl-thread" RUNNING {1000BD8093}>)
+
+Backtrace:
+  0: (SB-KERNEL:TWO-ARG-< (72204319/921600 0 72204319/921600 72204319/921600 72204319/921600 1863187/102400 ...) 16777216)
+  1: (SB-VM::GENERIC-<)
+  2: (DELETE-DARK-FILES-DIRECTORY "Gardiner")
+      Locals:
+        ANS = (72204319/921600 0 72204319/921600 72204319/921600 72204319/921600 1863187/102400 ...)
+        ANSW = ((72204319/921600 0 72204319/921600 72204319/921600 72204319/921600 1863187/102400 ...) NIL 0)
+        AVG = (72204319/921600 0 72204319/921600 72204319/921600 72204319/921600 1863187/102400 ...)
+        DARKNESS-TH = 29
+        DIR = "Gardiner"
+        FULL = (#P"/home/data6/webcams/pendroy/scancam/Gardiner/564010-00-2025-01-07-22-00-7.jpg" #P"/home/data6/webcams/pendroy/scancam/Gardiner/564010-00-2025-01-07-22-30-6.jpg" ..)
+        FULL-DIR-NAMESTRING = "/home/data6/webcams/pendroy/scancam/Gardiner"
+        HIGHEST = 0
+        #:LIST8 = (#P"/home/data6/webcams/pendroy/scancam/Gardiner/564010-00-2025-01-07-22-30-6.jpg" #P"/home/data6/webcams/pendroy/scancam/Gardiner/564010-00-2025-01-07-22-45-6.jpg" ..)
+        LOCAL-DELETED = 0
+        LOWEST = 16777216
+        NF = #P"/home/data6/webcams/pendroy/scancam/Gardiner/564010-00-2025-01-07-22-00-7.jpg"
+        SUMMARY = NIL
+        TEXT = NIL
+  3: ((LAMBDA NIL :IN DELETE-PROD-DARKFILES))
+      Locals:
+        CAM = ("Gardiner" . 1)
+        #:G3 = (("Gardiner" . 1) ("Bridger-Canyon" . 1) ("Lolo-North" . 1) ("Livingston-River-Hill" . 1) ("Bull-Lake" . 1) ("Evaro-Hill" . 1) ...)
+        #:G4 = (("Gardiner" . 1) ("Bridger-Canyon" . 1) ("Lolo-North" . 1) ("Livingston-River-Hill" . 1) ("Bull-Lake" . 1) ("Evaro-Hill" . 1) ...)
+  4: (SB-EXT:CALL-WITH-TIMING #<FUNCTION SB-IMPL::PRINT-TIME> #<FUNCTION (LAMBDA NIL :IN DELETE-PROD-DARKFILES) {B800FB9CEB}>)
+  5: (DELETE-PROD-DARKFILES #<unused argument>)
+      [No Locals]
+  6: ((LAMBDA NIL :IN DISPATCH))
+      Locals:
+        ARG = ("" "--process=delete-dark-files")
+        FUNC = DELETE-PROD-DARKFILES
+        FUNC-PAIR = (:DELETE-DARK-FILES . DELETE-PROD-DARKFILES)
+        SB-C::ITEM = :DELETE-DARK-FILES
+        NEWARGS = NIL
+  7: (SB-EXT:CALL-WITH-TIMING #<FUNCTION SB-IMPL::PRINT-TIME> #<FUNCTION (LAMBDA NIL :IN DISPATCH) {78FC64EFDCEB}>)
+  8: (DISPATCH ("" "--process=delete-dark-files"))
+      Locals:
+        ARG = ("" "--process=delete-dark-files")
+  9: (SB-INT:SIMPLE-EVAL-IN-LEXENV (DISPATCH (QUOTE ("" "--process=delete-dark-files"))) #<NULL-LEXENV>)
+ 10: (EVAL (DISPATCH (QUOTE ("" "--process=delete-dark-files"))))
+ 11: (SWANK::EVAL-REGION "(dispatch '(\"\" \"--process=delete-dark-files\")) ..)
+ 12: ((LAMBDA NIL :IN SWANK-REPL::REPL-EVAL))
+ 13: (SWANK-REPL::TRACK-PACKAGE #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1021D694BB}>)
+ 14: (SWANK::CALL-WITH-RETRY-RESTART "Retry SLIME REPL evaluation request." #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1021D6949B}>)
+ 15: (SWANK::CALL-WITH-BUFFER-SYNTAX NIL #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1021D6947B}>)
+ 16: (SWANK-REPL::REPL-EVAL "(dispatch '(\"\" \"--process=delete-dark-files\")) ..)
+ 17: (SB-INT:SIMPLE-EVAL-IN-LEXENV (SWANK-REPL:LISTENER-EVAL "(dispatch '(\"\" \"--process=delete-dark-files\")) ..)
+ 18: (EVAL (SWANK-REPL:LISTENER-EVAL "(dispatch '(\"\" \"--process=delete-dark-files\")) ..)
+ 19: (SWANK:EVAL-FOR-EMACS (SWANK-REPL:LISTENER-EVAL "(dispatch '(\"\" \"--process=delete-dark-files\")) ..)
+ 20: (SWANK::PROCESS-REQUESTS NIL)
+ 21: ((LAMBDA NIL :IN SWANK::HANDLE-REQUESTS))
+ 22: ((LAMBDA NIL :IN SWANK::HANDLE-REQUESTS))
+ 23: (SWANK/SBCL::CALL-WITH-BREAK-HOOK #<FUNCTION SWANK:SWANK-DEBUGGER-HOOK> #<FUNCTION (LAMBDA NIL :IN SWANK::HANDLE-REQUESTS) {100871002B}>)
+ 24: ((FLET SWANK/BACKEND:CALL-WITH-DEBUGGER-HOOK :IN "/home/wgl/quicklisp/dists/quicklisp/software/slime-v2.28/swank/sbcl.lisp") #<FUNCTION SWANK:SWANK-DEBUGGER-HOOK> #<FUNCTION (LAMBDA NIL :IN SWANK::HAN..
+ 25: (SWANK::CALL-WITH-BINDINGS ((*STANDARD-INPUT* . #<SWANK/GRAY::SLIME-INPUT-STREAM {100855FF03}>)) #<FUNCTION (LAMBDA NIL :IN SWANK::HANDLE-REQUESTS) {100871004B}>)
+ 26: (SWANK::HANDLE-REQUESTS #<SWANK::MULTITHREADED-CONNECTION {1007675793}> NIL)
+ 27: ((FLET SB-UNIX::BODY :IN SB-THREAD::RUN))
+ 28: ((FLET "WITHOUT-INTERRUPTS-BODY-" :IN SB-THREAD::RUN))
+ 29: ((FLET SB-UNIX::BODY :IN SB-THREAD::RUN))
+ 30: ((FLET "WITHOUT-INTERRUPTS-BODY-" :IN SB-THREAD::RUN))
+ 31: (SB-THREAD::RUN)
+ 32: ("foreign function: call_into_lisp_")
+ 33: ("foreign function: funcall1")
+
+answ:
+
+ #<CONS {1021F93EE7}>
+--------------------
+A proper list:
+0: (72204319/921600 0 72204319/921600 72204319/921600 72204319/921600 1863187/102400 424011/20480 1991621/51200 921600 72204319)
+1: NIL
+2: 0

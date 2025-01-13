@@ -24,7 +24,7 @@
                #:lock-and-trigger
 			   #:dex-get)
     
-  :version "2.16.5"
+  :version "2.17.4"
   :components ((:file "scancam-package")
 			   (:file "scancam-tools")
                (:file "dispatch")

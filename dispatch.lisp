@@ -95,6 +95,7 @@
 		(cons :find-time-gaps 'find-time-gaps-c)
 		(cons :del-dark-files 'dark-files-archive-directories)
 		(cons :detect-stars 'detect-stars-new)
+		(cons :delete-dark-files 'delete-prod-darkfiles)
 		(cons :delete-similar-files 'compare-directory-new) 
 		(cons :end-of-day 'end-of-day-cleanup)
 		(cons :end-of-day-test 'end-of-day-cleanup-test)
@@ -105,6 +106,37 @@
 
 ;; --- cheating
 ;; (map 'list #'(lambda (f) (com.google.flag::help (cdr f))) com.google.flag::*registered-flags*)
+
+(defun chk-for-trigger ()
+  (trigger-file-hard "scancam"))
+
+
+(defun time-chk ()
+  (multiple-value-bind (s min h d m y)
+	  (decode-universal-time (get-universal-time))
+	(declare (ignorable d m y))
+	(list h min s)))
+
+(defun run-till-trigger (&optional (interv 300))
+  (with-open-log-file ("scancam-trigger")
+	(let ((stopping nil)
+		  (*trace-output* (the-log-file)))
+	  (time
+	   (do ((trig (chk-for-trigger) (chk-for-trigger)))
+		   ((or trig stopping))
+		 (xlogntf "sleeping ~a seconds" interv)
+		 (unless (try-three)
+		   (xlogntft "scan fails")
+		   (setf stopping t))
+		 (debugc 5 (xlogntft "about to sleep; stopping is ~a" stopping))
+		 (block waiting
+		   (unless stopping
+			 (dotimes (tx interv)
+			   (if (chk-for-trigger)
+				   (return-from waiting))
+			   (sleep 10))))
+		 (format t ".")))
+	  (xlogntf "trigger exit from sleep loop"))))
 
 (defun dispatch (arg)
   (with-open-log-file ("dispatch" :show-log-file-name nil)
@@ -118,10 +150,10 @@
 			 (setf *directory-use* *directory*))
 		 (let ((newargs (parse-command-line (rest arg))))
 		   (setf *command-line-args* newargs)
-		   (xlogntf "Dispach, parsed args are ~s" newargs)
+		   (debugc 5 (xlogntf "Dispach, parsed args are ~s, options are ~s" newargs (show-opts)))
 		   (xlogntf "Operation is ~s" *process*)
 		   (cond (*help*
-				  #+nil (xlogntft "~a" (generate-usage-string))
+				  (xlogntft "~a" (generate-usage-string))
 				  (show-opts)
 				  (xlogntf "help"))
 				 
