@@ -125,17 +125,14 @@
 		(setf (gethash (first cx) *all-config-files* ) (second cx))))))
 
 (defun get-config-rescan (dr prop &key (debug nil))
-  "get config from scancam.lsp. dr is either relative or absolute directory name. Save dir and pathname in hash"
-  (let* ((dir (uiop:ensure-directory-pathname dr))
+  "get config from scancam.lsp. dr is relative. Save dir and pathname in hash"
+  (let* ((dir (make-pathname :directory `(:relative ,dr)) #+nil (uiop:ensure-directory-pathname dr))
 		 (cfn (make-pathname :name "rescancam" :type "lsp"))
 		 (configpn (merge-pathnames dir (make-pathname :name "rescancam" :type "lsp"))))
-	(if (not (probe-file configpn))
-		(xlogntf "gcr: no config file at ~s" configpn))
-	(let ((ckey (car (last (pathname-directory dr)))))
-	  (debugc 5 (xlogntf "gcr: setting hash: index ~s value ~s" ckey configpn))
-	  (if ckey
-		  (setf (gethash ckey *all-config-files* nil) (probe-file configpn))))
-	(let ((ans (get-config cfn prop :dir dir :debug  debug)))
+	(debugc 5 (xlogntf "gcr: setting hash: index ~s value ~s" dr configpn))
+	(multiple-value-bind (ans cdir)
+		(get-config cfn prop :dir dir :debug  debug)
+	  (setf (gethash dr *all-config-files* nil) cdir)
 	  (if debug (xlogntft "gcr: cfn ~s ans is ~s type is ~s" cfn ans (type-of ans)))
 	  (if (eql (type-of ans) 'SYMBOL)
 		  (format nil "~s" ans)
@@ -257,14 +254,16 @@
 	  (xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) ))
 	(xlogntf "ddfd: low=~a high=~a" lowest highest)
 	(xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) )
-	nil))
+	nil)) 
 
-(defun delete-prod-darkfiles (&optional (date ""))
+(defun delete-prod-darkfiles (&optional (date nil))
   (with-open-log-file ("delete-darkfiles-batch" :show-log-file-name nil)
 	(let ((*trace-output* (the-log-file)))
 	  (time
 	   (mapc #'(lambda (cam)
-			(delete-dark-files-directory (concatenate 'string (car cam) date)))
+			(delete-dark-files-directory (if date
+											 (concatenate 'string (car cam) "/" date)
+											 "")))
 		  (images-by-camera))))))
 
 #+nil
@@ -302,7 +301,7 @@
 		  ) ;; TODO : move this to independent processor; do it by directory, perhaps hourly.
 	  (error (q)
 		(progn (xlogf "oh, we are error, q~s" q)
-			   (xlogntf "wif: botch on delete darkness for ~a~%error ~a" long-fn q))))))
+			   (xlogntft "wif: botch on delete darkness for ~a~%error ~a" long-fn q))))))
 
 (defparameter *camera-map* nil)
 
@@ -555,6 +554,14 @@
   (with-open-log-file ("vermont-cams-test")
 	(do-vermont-cams)))
 
+(defun try-pendroy-new-raw ()
+  (cond ((get-rwis-home-page "current-new") 
+		 (find-images-new-home-page *saved-home-page*)
+		 (with-open-file (fod "live-directories.lsp"  ;; TODO This is redundant with 'images-by-camera, but not as up to date
+							  :direction :output :if-exists :supersede :if-does-not-exist :create)
+		   (write (all-image-directories) :stream fod)))
+		(t (xlogntft "tpn: home page fetch failure"))))
+
 (defun try-pendroy-new ()
   (if (get-rwis-home-page "current-new") 
 	  (handler-case
@@ -564,7 +571,9 @@
 								 :direction :output :if-exists :supersede :if-does-not-exist :create)
 			  (write (all-image-directories) :stream fod)))
 		(error (e)
-		  (xlogntft "tpn: error in new rwis home page processing ~s:" e)))
+		  (progn
+			(xlogntft "tpn: error in new rwis home page processing ~s:" e)
+			(break "tpn: botch"))))
 	  (xlogntft "tpn: home page fetch failure")))
 
 (defun images-by-camera0 (images cfh reset)
@@ -594,6 +603,7 @@
 (defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
   "Pull images from all cameras. If rwis is set, process those cameras"
   (declare (ignorable alternate-log-file-name))
+  (xlogntft "try-three ~s ~s" alternate-log-file-name run-rwis)
   (setf *images-by-camera* nil)
   (images-by-camera :reset nil)
   (setf *all-config-files* nil)
@@ -602,8 +612,7 @@
 	(with-open-log-file ((if alternate-log-file-name
 							 alternate-log-file-name
 							 "try3")
-						 :show-log-file-name t) ;; was :dates :hms; too many logs
-	  
+						 :show-log-file-name t)
 	  (set-alert-file-name "scancam")
 	  (log-version-number "t3:==================== scancam (try-three) ")
 	  (setf *images-pulled* 0)
@@ -659,12 +668,12 @@
 		 (xlogntf "Unexpected extra args, processing halted: ~% ~s " args))
 		(t (xlogntf "Would be processing '~s'" args))))
 
-(defun try-three-new (args)
+#+nil (defun try-three-new (args)
   (cond (args
 		 (xlogntf "Unexpected extra args, processing halted: ~% ~s " args))
 		(t (try-three args))))
 
-(defun try-three-with-quit ()
+#+nil (defun try-three-with-quit ()
   (try-three)
   (sb-ext:exit))
 
@@ -1033,11 +1042,12 @@
 										 (gethash "content-type" headers "whoops")
 										 "double whoops"))
 		  
+		  
 		  (setf *last-body* body)
 		  (handler-case
 			  (write-image-file full body)
 			(error (e)
-			  (xlogntf "pw: botch ~s on ~s, header type ~s" e uri
+			  (xlogntft "pw: botch ~s on ~s, header type ~s" e uri
 					   (if headers
 						   (gethash "content-type" headers "whoops")
 						   "double whoops"))))))
@@ -1104,8 +1114,7 @@
 		 (tokes (tokenize1 (file-namestring path) #\-))
 		 (dirx (calc-dir-from-tokens tokes))
 		 (pfn (calc-path dirx)))
-	#+nil (break "which  ~s~%uri    ~s~%dir   ~s fn ~s~%" which  path dirx pfn)
-	(get-config-rescan `(:relative ,(first dirx)) :average)
+	(get-config-rescan (first dirx) :average)
 	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
 	  (pull-rwis (cons pfn (uri the-url))))
 	(first dirx)))
