@@ -106,7 +106,9 @@
 (defun make-list-files (full-list files)
   (dolist (ix full-list)
 	  (when (or (equal (pathname-type ix) "jpg")
-				(equal (pathname-type ix) "jpg~"))
+				(equal (pathname-type ix) "jpg~")
+				(equal (pathname-type ix) "JPG")
+				(equal (pathname-type ix) "JPG~"))
 		(pushnew ix files)))
   files)
 
