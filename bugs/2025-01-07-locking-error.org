@@ -1,0 +1,14 @@
+2025-01-07 00:15:00.173537 xlog: APPEND  beginning of log-file: 2025-01-07_try3.log
+2025-01-07 00:19:59.948996 xlog: nest, new: #P"/filesys/data19/scancam/East-of-Denton/2025-01-07_East-of-Denton-rwis.log"
+
+2025-01-07 00:20:00.211534 Begin run
+2025-01-07 00:20:00.211539 lockme: locking scancam
+2025-01-07 00:20:00.211713 lockme: error Error in SB-POSIX::OPEN-WITH-MODE: Permission denied (13) 
+    lock "scancam" already in place, time 2025-01-07-00-15, 300 seconds old
+2025-01-07 00:20:00.211804 t3: ▁██████ Lock file in place!! 2025-01-07-00-15, 300 seconds old t3: ver 2.16.5 
+t3: successful exit
+
+2025-01-07 00:20:00.212195 xlog: end of log-file 2025-01-07_try3.log
+2025-01-07 00:20:44.310619 xlog: end of log-file 2025-01-07_try3.log
+
+Many instances are 45 seconds over.
