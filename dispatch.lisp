@@ -89,6 +89,7 @@
   (xlogntft "files ~s" *command-line-args*)
   (xlogntft (generate-usage-string)))
 
+;; Process group
 (defparameter *dispatch*
   (list (cons :scancam 'try-three)
 		(cons :scancam-test 'try-three-alt)
