@@ -6,9 +6,8 @@
 
 (declaim (optimize (speed 3) (safety 0) (debug 0) (space 0)))
 
-(defparameter *same-threshold* 0.0f0)
-(declaim (single-float *same-threshold*))
 (defparameter *images-viewed* 0)
+
 (declaim (fixnum *images-viewed*))
 
 (defparameter *global-images-deleted* 0)
@@ -16,8 +15,10 @@
 (defparameter *delete-these-files* nil)
 (defparameter *move-files-for-real* nil)
 
-(defun compare-images (image1 image2)
+(defun compare-images (image1 image2 &optional (sameness-threshold 10.0))
   "Determine if two images are similar"
+  (declare (single-float sameness-threshold))
+  (xlogntf "ci: image1~%    ~s image2 ~s" image1 image2)
   (let ((height1 0)
 		(height2 0)
 		(width1 0)
@@ -29,7 +30,6 @@
 			  (image-size img1)
 			(setf height1 height-1
 				  width1 width-1)
-			(xlogntf "ci: first size is ~s ~s " width-1 height-1)
 			(debugc 5 (xlogntf "ci: first size is ~s ~s " width-1 height-1)))
 		  (handler-case
 			  (with-image-from-file (img2 image2 :jpg)
@@ -40,10 +40,9 @@
 				  (if (or (not (= width1 width2))
 						  (not (= height1 height2)))
 					  (progn
-						(error (xlogntf " widths/height different. Cain't compare "))
-						(incf *errors-encountered*)))
-				  
-				  (debugc 5 (xlogntf "ci: first size is ~a ~a " width1 height1))
+						(incf *errors-encountered*)
+						(error (xlogntf " widths/height different. Cain't compare "))))
+ 				  (debugc 5 (xlogntf "ci: first size is ~a ~a " width1 height1))
 				  (debugc 5 (xlogntf "ci: second size is ~a ~a" width2 height2))
 				  (let ((rgb1-diff 0)
 						(rgb2-diff 0)
@@ -68,7 +67,7 @@
 						   (ans2 (/ rgb2-diff wxhf))
 						   (ans3 (/ rgb3-diff wxhf))
 						   (ans123 (+ ans1 ans2 ans3)) 
-						   (deleted (< ans123  (* 3  *same-threshold*))))
+						   (deleted (< ans123  (* 3.0  sameness-threshold))))
 					  (declare (single-float ans1 ans1 ans3))
 					  (when deleted 
 						(incf *similar-images-deleted*)
@@ -464,12 +463,14 @@
 	  (xlogntf "overall, deleted ~a files" *global-images-deleted*)))
 
 (defun init-compare (dir)
-  (setf *same-threshold*
-		(get-config-rescan (probe-file dir) :sameness))
-  (xlogntf "ic: sameness thresh ~a" *same-threshold*)
-  (setf  *images-viewed* 0)
-  (setf  *similar-images-deleted* 0)
-  (setf  *delete-these-files* nil))
+  "Dir is relative, e.g., 'Pendroy'"
+  (let  ((sameness-thresshold
+		   (get-config-rescan dir :sameness)))
+	(xlogntf "ic: sameness thresh ~a" sameness-thresshold)
+	(setf  *images-viewed* 0)
+	(setf  *similar-images-deleted* 0)
+	(setf  *delete-these-files* nil)
+	sameness-thresshold))
 
 (defun compare-images-test-different ()
   (let  ((one (car (last (directory "/home/data6/webcams/pendroy/scancam/pendroy/*.jpg" ))))
