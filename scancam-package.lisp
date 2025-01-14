@@ -15,6 +15,7 @@
         #:dup-images-by-hash
 #+nil        #:replace-all
         #:lock-and-trigger
+		#:local-time
 		#:configuration-r
 		#:tokens
 		#:cl-gd

@@ -22,9 +22,10 @@
 			   #:configuration-r
 			   #:str
                #:lock-and-trigger
+			   #:local-time
 			   #:dex-get)
     
-  :version "2.17.6"
+  :version "2.18.3"
   :components ((:file "scancam-package")
 			   (:file "scancam-tools")
                (:file "dispatch")

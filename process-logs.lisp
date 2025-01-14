@@ -2,8 +2,6 @@
 
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
-
-
 (defun f-logdir (basename)
   (let* ((basep (uiop:ensure-directory-pathname basename))
 		 (basename-last (car (last (pathname-directory basep ))))
