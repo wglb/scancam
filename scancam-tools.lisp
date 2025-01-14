@@ -23,8 +23,6 @@
 
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
-(defparameter *dirs-to-visit* nil)
-
 (defun is-a-number (who) 
   "Different from numberp, as who is a string. Parse integer wouldn't help names line '202four'"
   (every 'digit-char-p who))
@@ -48,13 +46,7 @@
   "Is s nil or the empty string ?"
   (empty? s))
 
-#+nil (defun digitp (s)
-  "Return t if `s' contains at least one character and all characters are numerical. Stolen from :str package"
-  (unless (emptyp s)
-    ;; regex ? Check sign and exponents.
-    (every (lambda (char)
-             (digit-char-p char))
-           s)))
+(defparameter *dirs-to-visit* nil)
 
 (defun collect-year (basename &optional (deb nil)) ;; TODO -- move to general *.lisp
   (setf *dirs-to-visit* nil)
@@ -85,3 +77,12 @@
 			 (if deb (xlogntf "collecting ~s" dir))
 			 (push dir *dirs-to-visit*))))))
   (reverse *dirs-to-visit*))
+
+(defun yesterday ()
+  (let* ((yest (adjust-timestamp (local-time:now)  (offset :day -1)))
+		 (ans (format nil "~4,'0d/~2,'0d/~2,'0d"
+					  (timestamp-year yest)
+					  (timestamp-month yest)
+					  (timestamp-day yest))))
+	ans))
+
