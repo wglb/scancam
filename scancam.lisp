@@ -125,11 +125,13 @@
 		(setf (gethash (first cx) *all-config-files* ) (second cx))))))
 
 (defun get-config-rescan (dr prop &key (debug nil))
-  "get config from scancam.lsp. dr is relative. Save dir and pathname in hash"
-  (let* ((dir (make-pathname :directory `(:relative ,dr)) #+nil (uiop:ensure-directory-pathname dr))
+  (if debug (break "why debug??"))
+  "get config from scancam.lsp. dr is relative in string form. Save dir and pathname in hash"
+  (let* ((dir (make-pathname :directory `(:relative ,dr)))
 		 (cfn (make-pathname :name "rescancam" :type "lsp"))
 		 (configpn (merge-pathnames dir (make-pathname :name "rescancam" :type "lsp"))))
-	(debugc 5 (xlogntf "gcr: setting hash: index ~s value ~s" dr configpn))
+	(if debug
+		(xlogntf (xlogntf "gcr: setting hash: index ~s value ~s" dr configpn)))
 	(multiple-value-bind (ans cdir)
 		(get-config cfn prop :dir dir :debug  debug)
 	  (setf (gethash dr *all-config-files* nil) cdir)
@@ -174,7 +176,7 @@
 			(when (and average thresh)
 			  ;; example (85.27225 0.0 85.27037 85.27037 85.27037 26.909585656586525d0 26.909585656586525d0 26.909585656586525d0 921600)
 			  (let* ((pfn (format nil "~adarkness.txt" (dates-ymd :ym)))
-					 (fn (merge-pathnames dir pfn))
+					 (fn (merge-pathnames dir pfn)) 
 					 (do-title (not (probe-file fn))))
 				(with-open-file (fo fn :direction :output :if-exists :append :if-does-not-exist :create)
 				  (if do-title
@@ -183,10 +185,7 @@
 				  (write-line (format nil "~42a: ~{~14,3,f,~}" (file-namestring long-fn) average ) fo)
 				  (debugc 5 (xlogntf "cfdd: darkness: ~a: ~{~f, ~}" (file-namestring long-fn) average )))))
 			
-			(cond #+nil ((delete-uninteresting-file long-fn)
-						 (xlogntf "cfdd: boring: ~a" long-fn))
-				  
-				  ((or below-avg-thresh below-deltas-thresh)
+			(cond ((or below-avg-thresh below-deltas-thresh)
 				   (push (xlogntf "cfdd: gonna move ~s to darkness" long-fn) rv)
 				   (detect-stars-in-file (directory-namestring long-fn) long-fn)
 				   (let ((err (move-file-to-delete long-fn "delete-darkness")))
@@ -197,7 +196,6 @@
 				   (debugc 5 (xlogntf "cfdd: ~a av=~7,3,f delta sum=~7,3,f deltas-thresh=~7,3,f avgt ~a delt ~a ~a" 
 									  long-fn avg delta-sum deltas-thresh below-avg-thresh below-deltas-thresh
 									  "deleted")))
-				  
 				  (t 
 				   (debugc 5 (xlogntf "cfdd: unmatch ~a av:~7,3,f del sum,:~7,3,f deltas-thresh ~7,3,f  " long-fn avg delta-sum deltas-thresh))))
 			(list average rv delete-count))
@@ -225,8 +223,7 @@
 		 (full nil))
 	(xlogntf "full-dir-namestring is ~s" full-dir-namestring)
 	(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
-	(with-open-log-file ((format nil "ddarkfi-dir~a" (slashes-to-hyphens full-dir-namestring))
-						 :show-log-file-name t)
+	(with-open-log-file ("ddarkfi-dir" :dir (list :relative dir) :show-log-file-name t)
 	  (log-version-number "ddfd: delete-dark-files-directory")
 	  (setf full (directory (concatenate 'string full-dir-namestring "/*.jpg")))
 		(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
@@ -256,31 +253,18 @@
 	(xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) )
 	nil)) 
 
-(defun delete-prod-darkfiles (&optional (date nil))
+(defun delete-prod-darkfiles (&optional (date-str nil))
+  "Delete dark files (and potentially look for stars), most often for yesderday."
   (with-open-log-file ("delete-darkfiles-batch" :show-log-file-name nil)
-	(let ((*trace-output* (the-log-file)))
-	  (time
-	   (mapc #'(lambda (cam)
-			(delete-dark-files-directory (if date
-											 (concatenate 'string (car cam) "/" date)
-											 "")))
-		  (images-by-camera))))))
-
-#+nil
-(defun dark-files-archive-directories (&optional (which "."))
-  "This is incomplete. doesnot appar to descend down to y/m/d"
-  (let ((dirl (if (consp which)
-				  which
-				  (list which))))
-	(dolist (dir dirl)
-	  (with-open-log-file ("dark-files-archive" :dir `(:relative ,dir) :show-log-file-name t)
-		(log-version-number "dfa: ")
-		(setf *dark-images-deleted* 0)
-		(delete-dark-files-directory dir)
-		(dolist (dx (collect-year dir))
-		  (delete-dark-files-directory dx))
-		(xlogntf "darkfile viewed ~a deleted ~a" *global-images-viewed* *dark-images-deleted*))))
-  (xlogntf "darkfile viewed ~a deleted ~a" *global-images-viewed* *dark-images-deleted*))
+	(let ((adate (if date-str
+					 date-str
+					 (yesterday))))
+	  (xlogntf "dpd: for date of ~s" adate)
+	  (let ((*trace-output* (the-log-file)))
+		(time
+		 (mapc #'(lambda (cam)
+				   (delete-dark-files-directory (concatenate 'string (car cam) "/" adate)))
+			   (images-by-camera)))))))
 
 (defparameter *last-body* nil)
 
@@ -296,12 +280,10 @@
 		  (ensure-directories-exist long-fn)
 		  (with-open-file (fo long-fn :direction :output :if-exists :supersede
 									  :element-type '(unsigned-byte 8))
-			(write-sequence body fo))
-		  ;;(chk-for-delete-darkness long-fn)
-		  ) ;; TODO : move this to independent processor; do it by directory, perhaps hourly.
+			(write-sequence body fo)))
 	  (error (q)
 		(progn (xlogf "oh, we are error, q~s" q)
-			   (xlogntft "wif: botch on delete darkness for ~a~%error ~a" long-fn q))))))
+			   (xlogntft "wif: botch on write-image-file for ~a~%error ~a" long-fn q))))))
 
 (defparameter *camera-map* nil)
 
@@ -354,7 +336,7 @@
   (let* ((summary nil)
 		 (image-count 0)
 		 (cams (list-cams-and-directories :arizona-cams)))
-	(with-open-log-file ("rwis-arizona" :dir (list :relative "arizona") #+nil (uiop:ensure-directory-pathname  "arizona")  )
+	(with-open-log-file ("rwis-arizona" :dir (list :relative "arizona") )
 	  (log-version-number (format nil "arizona: cams are ~s" cams)) 
 	  (handler-case
 		  (dolist (cam cams)
@@ -668,39 +650,35 @@
 		 (xlogntf "Unexpected extra args, processing halted: ~% ~s " args))
 		(t (xlogntf "Would be processing '~s'" args))))
 
-#+nil (defun try-three-new (args)
-  (cond (args
-		 (xlogntf "Unexpected extra args, processing halted: ~% ~s " args))
-		(t (try-three args))))
-
-#+nil (defun try-three-with-quit ()
-  (try-three)
-  (sb-ext:exit))
-
 (defun end-of-day-cleanup-test (args)
   (xlogntft "end-of-day-cleanup-test, args are ~s" args))
 
+(defun cleanup-one-camera (camera-directory)
+  "Remove duplicates and similar images. To be done before items filed away"
+  (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t :dir `(:relative ,camera-directory))
+	(remove-duplicates-by-hash camera-directory)
+	(dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
+	  (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; TODO -- new code
+		(xlogntf "eodc: Going to ~s for deletion" newpn)
+		(remove-duplicates-by-hash newpn)))
+	(compare-directory camera-directory)))
+
 (defun  end-of-day-cleanup (args)
-  "This needs to restore the camera list"
+  "Clean up similar images, duplicate images, and file away many things."
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t)
 	(restore-config-file-list)
 	(log-version-number "eod")
 	(cond ((null args)
 		   (let ((*trace-output* (the-log-file))
 				 (cams (all-image-directories)))
+			 (xlogntf "eodc: there are ~a cameras to process" (length cams))
 			 (time
 			  (progn
-				(xlogntf "eodc: there are ~a cameras to process" (length cams))
-				(dolist (camera-directory cams)
-				  (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t :dir `(:relative ,camera-directory))
-					(remove-duplicates-by-hash camera-directory)
-					(dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
-					  (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; TODO -- new code
-						(xlogntf "eodc: Going to ~s for deletion" newpn)
-						(remove-duplicates-by-hash newpn)))
-					(compare-directory camera-directory)))
-				(delete-uninteresting-mass)
-				(file-away-auxiliary-mass)))))
+				(mapc #'(lambda (camera-directory)
+						 (cleanup-one-camera camera-directory))
+					  cams)
+				(file-away-auxiliary-mass)))
+			 #+nil (delete-prod-darkfiles (yesterday)))) ;; TODO --may happen before midnight. move to its own cron driven process
 		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
 	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
   (xlogntf " eod: ~a errors encounterd" *errors-encountered*))
@@ -792,7 +770,7 @@
   (xlogntft "file-away-aux ~s" camera-directory)
   (cond ((probe-file camera-directory)
 		 (dolist (dx (list "delete-similar" "delete-duplicates" "delete-darkness" "marked-images" "bright" "radio" "delete-uninteresting-new" "delete-uninteresting"))
-		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list dx))) #+nil (concatenate 'string camera-directory "/" dx))) ;; use the UIOP one
+		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list dx))))) 
 			   (xlogntf "~s" newpn)
 			   (if (not newpn)
 				   (xlogntf "No path for ~s" dx)
@@ -825,112 +803,6 @@
 	  (dolist (dx dirs)
 		(file-away-directory dx)))))
 
-#+nil(defun delete-uninteresting-file (longfn)
-  longfn
-  nil)
-
-#+nil (defun delete-uninteresting-file-old (longfn)
-  "determine if this is an uninteresting file. if so, move the sucker. Answer true if moved"
-  ;; TODO finish.
-  (let* ((dir (directory-namestring longfn))
-		 (bad-patterns (get-config-rescan dir :not-interesting))
-		 (dc-fn (string-downcase (file-namestring longfn)))
-		 (ans nil))
-	(cond ((null bad-patterns)
-		   nil)
-		  ((consp bad-patterns)
-		   (dolist (px bad-patterns)
-			 (when (search (string-downcase px) dc-fn)
-			   (when (move-file-to-delete longfn "delete-uninteresting-new")
-				 (incf *uninteresting-files-deleted*)
-				 (setf ans t)))))
-		  (t
-		   (when (search (string-downcase bad-patterns) dc-fn)
-			 (when (move-file-to-delete longfn "delete-uninteresting-new")
-			   (incf *uninteresting-files-deleted*)
-			   (setf ans t)))))
-	ans))
-
-(defun delete-uninteresting (dir)
-  dir)
-
-#+nil (defun delete-uninteresting-old (dir)
-  "Delete uninteresting files from directory. TODO: this logic really sucks"
-  (let* ((fancy-name (format nil "dun-~a" (slashes-to-hyphens dir)))
-		 (regexp-uninteresting nil)
-		 (bad-patterns (get-config-rescan dir :not-interesting))
-		 (uninteresting-files-deleted 0))
-	(when bad-patterns
-	  (with-open-log-file (fancy-name :dir (list :relative dir) :show-log-file-name t)
-		(log-version-number dir)
-		(xlogntf "du: for directory ~s ~%   we have ~s" dir bad-patterns)
-		(cond ((null bad-patterns)
-			   (xlogntf "du: no bad-patterns to check"))
-			  
-			  ((consp bad-patterns)
-			   (dolist (px bad-patterns)
-				 (if (eq (type-of px)  'symbol)
-					 (push (format nil "~a" px) regexp-uninteresting)
-					 (push px regexp-uninteresting))))
-			  
-			  (t (push bad-patterns regexp-uninteresting)))
-		
-		(when regexp-uninteresting
-		  (let ((jpg-files (directory (concatenate 'string dir "*.jpg"))))
-			(dolist (jx jpg-files)
-			  (let ((jxs (file-namestring jx)))
-				;; could be as follows
-				;; (delete-uninteresting-file jxs regexp-uninteresting)
-				(dolist (re  regexp-uninteresting)
-				  (when (search (string-downcase re) (string-downcase jxs))
-					(let ((err (move-file-to-delete jx "delete-uninteresting")))
-					  (incf *errors-encountered* err)
-					  (when (zerop err)
-						(incf *uninteresting-files-deleted*)
-						(incf uninteresting-files-deleted)))))))))
-		
-		(xlogntf "du: deleted ~a uninteresting files in ~a" 
-				 (if (zerop uninteresting-files-deleted)
-					 "no"
-					 uninteresting-files-deleted)
-				 dir))
-	  (xlogntf "du: deleted ~a uninteresting files in ~a" 
-			   (if (zerop uninteresting-files-deleted)
-				   "no"
-				   uninteresting-files-deleted)
-			   dir))
-	fancy-name))
-
-(defun delete-uninteresting-archives (site-directory)
-  "Delete uninteresting files from top-level directiry ndir"
-  (with-open-log-file ("dua-arch" :show-log-file-name t)
-	(log-version-number site-directory)
-	(xlogntf "dua: dirs ~a" (probe-file  site-directory))
-	(delete-uninteresting site-directory)
-	(dolist (yr (collect-year site-directory))
-	  (delete-uninteresting yr))
-	(xlogntf "deleted ~a uninteresting files"
-			 (if (zerop *uninteresting-files-deleted*) "no" *uninteresting-files-deleted*)))
-  (xlogntf "deleted ~a uninteresting files"
-		   (if (zerop *uninteresting-files-deleted*) "no" *uninteresting-files-deleted*)))
-
-
-(defun delete-uninteresting-mass ()
-  )
-
-(defun delete-uninteresting-mass-old ()
-  (setf *uninteresting-files-deleted* 0)
-  (with-open-log-file ("delete-uninteresting" :show-log-file-name t)
-	(log-version-number "uninteresting-mass")
-	(if (probe-file  "live-directories.lsp")
-		(let ((dirs (with-open-file (fi "live-directories.lsp")
-					  (read fi))))
-		  (dolist (dx dirs)
-			(xlogntf "dum: dir ~a  says" dx)
-			(delete-uninteresting dx)))
-		(xlogntf "dum: lol nope"))
-	(xlogntf "deleted ~a uninteresting files" *uninteresting-files-deleted*))
-  (xlogntf "deleted ~a uninteresting files" *uninteresting-files-deleted*))
 
 (defvar *scancam*)
 
@@ -945,9 +817,6 @@
 (defvar *file-away-archive*)
 (defvar *delete-similar-files-archives*)
 (defvar *delete-dark-files*)
-(defvar *delete-uninteresting*)
-(defvar *delete-uninteresting-archives*)
-
 
 (defparameter *camera-home-page* nil)
 
@@ -1058,7 +927,6 @@
   (let* ((dir (first fn-tokesa))
 		 (fn-tokes (second fn-tokesa))
 		 (camera-id (first fn-tokes))
-		 #+nil (extra (parse-integer(second fn-tokes)))
 		 (extra (second fn-tokes))
 		 (year (parse-integer (fifth fn-tokes)))
 		 (month (parse-integer (third fn-tokes)))
@@ -1141,49 +1009,52 @@
 			  arg)))
 	(find-time-gaps argx *time-gaps*)))
 
-(defparameter *full-directory* nil)
-
 (defun compare-directory-new (arg)
   (cond ((null arg)
 		 (compare-directory *directory*))
 		(t (xlogntf "compare-directory-new: unrecognized args, processing halted ~s" arg))))
 
-(defun compare-directory ( &optional (dir "/home/data6/webcams/pendroy/scancam/pendroy/2020/05/30/") ) 
+(defun compare-directory ( &optional (dir "Pendroy/2024/05/30/") ) 
   "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30"
   ;; TODO calcuate ratio of files considered same to number left and report.
   (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
-		 (log-fn (slashes-to-hyphens full-dir-namestring)))
-	(with-open-log-file ((format nil "comp-dir~a" log-fn) :dates t :dir (list :relative (car (last (pathname-directory (uiop:ensure-directory-pathname dir)))))) ;; TODO: wow
-	  (xlogntf "Danged log file is in fact open ~s" (the-log-file))
-	  (let ((*trace-output* (the-log-file))
-			(*error-output* (the-log-file)))
-		(progn
-		  (init-compare dir)
-		  (xlogft "compare-directory ~a" (version-number-string "cd"))
-		  (setf *full-directory* (sort (directory (concatenate 'string full-dir-namestring "/*.jpg")) 
-									   'string<  :key #'(lambda (s)
-														  (file-namestring s))))
-		  (let* ((full *full-directory*)
-				 (top (car full)))
-			(xlogntf "cd: we have ~a images to check" (length full))
-			(if (and *same-threshold* (not (consp *same-threshold*)) (zerop *same-threshold*))
-				(xlogntf "cd: no threshold, saving time")
-				(dolist  (ni  (cdr full))
-				  (handler-case
-					  (compare-images top ni)
-					(error (e)
-					  (incf *errors-encountered*)
-					  (move-file-to-delete top "broken-images")
-					  (xlogntf "cd: on image ~a, skipping~%error: ~a" top e)))
-				  
-				  (setf top ni))))
-		  (debugc 5 (xlogntf "delete: ~a" *delete-these-files*))
-		  (delete-files-from-list *delete-these-files* )
-		  (xlogntft "~a images viewed ~a images deleted ratio ~6,2,f" 
-					*images-viewed* *similar-images-deleted* 
-					(if (plusp *images-viewed*)
-						(/ (* 100.0 *similar-images-deleted*) *images-viewed*)
-						0.0)))))))
+		 (log-fn (slashes-to-hyphens full-dir-namestring))
+		 (sameness-threshold (init-compare dir)))
+	(if (and sameness-threshold (plusp sameness-threshold))
+		(with-open-log-file ((format nil "comp-dir~a" log-fn) 
+							 :dates t 
+							 :dir (pathname-directory (uiop:ensure-directory-pathname dir))) ;; TODO: wow
+		  (let ((*trace-output* (the-log-file))
+				(*error-output* (the-log-file)))
+			(progn
+			  (xlogft "compare-directory ~a" (version-number-string "cd"))
+			  (let* ((full (sort (directory (concatenate 'string full-dir-namestring "/*.jpg")) 
+								 'string<  :key #'(lambda (s)
+													(file-namestring s))))
+					 (top (car full)))
+				(xlogntf "cd: we have ~a images to check" (length full))
+				(if (and sameness-threshold (plusp sameness-threshold))
+					(dolist  (ni  (cdr full))
+					  (handler-case
+						  (compare-images top ni)
+						(error (e)
+						  (incf *errors-encountered*)
+						  (move-file-to-delete top "broken-images")
+						  (xlogntf "cd: on image ~a, skipping~%error: ~a" top e)))
+					  
+					  (setf top ni))
+					))
+			  (debugc 5 (xlogntf "delete: ~a" *delete-these-files*))
+			  (delete-files-from-list *delete-these-files* )
+			  (xlogntft "~a images viewed ~a images deleted ratio ~6,2,f" 
+						*images-viewed* *similar-images-deleted* 
+						(if (plusp *images-viewed*)
+							(/ (* 100.0 *similar-images-deleted*) *images-viewed*)
+							0.0)))))
+		(xlogntf "cd: no threshold (~s, plusp ~s), saving time" sameness-threshold 
+				 (if sameness-threshold
+					 (plusp sameness-threshold)
+					 nil)))))
 
 (defun compare-archive-directories (&optional (dir "/home/data6/webcams/pendroy/scancam/apgar-visitor/")  )
   (global-init (directory-namestring dir))
