@@ -18,7 +18,7 @@
 (defun compare-images (image1 image2 &optional (sameness-threshold 10.0))
   "Determine if two images are similar"
   (declare (single-float sameness-threshold))
-  (xlogntf "ci: image1~%    ~s image2 ~s" image1 image2)
+  (debugc 5 (xlogntf "ci: image1~%    ~s image2 ~s" image1 image2))
   (let ((height1 0)
 		(height2 0)
 		(width1 0)
