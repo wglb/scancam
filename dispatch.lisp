@@ -103,6 +103,7 @@
 		(cons :subtract-dir 'subtract-dir-new)
 		(cons :help 'show-opts)
 		(cons :file-away-mass 'file-away-mass)
+		(cons :file-away-auxiliary-mass 'file-away-auxiliary-mass)
 		(cons :file-away-override 'file-away-override-new)))
 
 ;; --- cheating
