@@ -226,7 +226,6 @@
 	  (log-version-number "ddfd: delete-dark-files-directory")
 	  (setf full (directory (concatenate 'string full-dir-namestring "/*.jpg")))
 		(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
-		(xlogntf "ddfd: YO! Yo again !about to open log file at directory ~a" full-dir-namestring)
 		(if (and (not (consp darkness-th)) (zerop darkness-th))
 			(xlogntf "ddfd: no threshold, gonna save some time")
 			(dolist (nf full)
