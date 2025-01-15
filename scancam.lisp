@@ -125,13 +125,12 @@
 		(setf (gethash (first cx) *all-config-files* ) (second cx))))))
 
 (defun get-config-rescan (dr prop &key (debug nil))
-  (if debug (break "why debug??"))
   "get config from scancam.lsp. dr is relative in string form. Save dir and pathname in hash"
-  (let* ((dir (make-pathname :directory `(:relative ,dr)))
+  (let* ((dir (make-pathname :directory (pathname-directory dr)))
 		 (cfn (make-pathname :name "rescancam" :type "lsp"))
 		 (configpn (merge-pathnames dir (make-pathname :name "rescancam" :type "lsp"))))
 	(if debug
-		(xlogntf (xlogntf "gcr: setting hash: index ~s value ~s" dr configpn)))
+		(xlogntf (xlogntf "gcr: dir ~s configfn ~s" dr configpn)))
 	(multiple-value-bind (ans cdir)
 		(get-config cfn prop :dir dir :debug  debug)
 	  (setf (gethash dr *all-config-files* nil) cdir)
@@ -759,8 +758,7 @@
 	  (cond ((eq to-file-p :true)
 			 (log-version-number "file-away")
 			 (xlogntf "fad: directory is ~s fdir is ~a " the-dir the-dir )
-			 (let ((list-o-files (file-away-flist the-dir)))
-			   (file-away-list list-o-files)))
+			 (file-away-list (file-away-flist the-dir)))
 			  
 			(t 
 			 (xlogntf "fad: not to file these for ~a" the-dir))))))
