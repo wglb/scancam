@@ -779,7 +779,8 @@
 		(t (xlogntf "No base directory ~a" camera-directory)
 		   nil)))
 
-(defun file-away-auxiliary-mass ()
+(defun file-away-auxiliary-mass (&optional ign)
+  (declare (ignorable ign))
   (with-open-log-file ("file-aux")
 	(dolist (dx (all-image-directories))
 	  (with-open-log-file ("file-aux" :dir `(:relative ,dx) :show-log-file-name t)
