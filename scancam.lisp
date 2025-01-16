@@ -211,7 +211,7 @@
 		ans)))
 
 
-(defun delete-dark-files-directory (&optional (dir "."))
+(defun delete-dark-files-directory (&optional (dir *default-pathname-defaults*))
   " TODO: call this in separate thread independent of main"
   (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
 		 (summary nil)
@@ -306,7 +306,7 @@
 (defun list-cams (which)
   (mapcar #'(lambda (wh)
 			  (map-camera-directory (first wh)))
-		  (let ((thing (probe-file (get-config-rescan "." which))))
+		  (let ((thing (probe-file (get-config-rescan *default-pathname-defaults* which))))
 			(if thing
 				(with-open-file (fi thing :direction :input) (read fi))
 				(progn
@@ -314,7 +314,7 @@
 				  nil)))))
 
 (defun list-cams-and-directories (which)
-  (let ((fn (get-config-rescan "." which)))
+  (let ((fn (get-config-rescan *default-pathname-defaults* which)))
 	(cond  ((null fn)
 			(xlogntft "lcad: No camera entry for ~s: " which)
 			nil)
@@ -357,7 +357,7 @@
 (defun get-site-home ( &optional (name "glacier-park-home.lsp") (url nil))
   (let* ((home-loc 
 		   (if (null url)
-			   (cdr (with-open-file (fi (get-config-rescan "." :glacier-cams) :direction :input)
+			   (cdr (with-open-file (fi (get-config-rescan *default-pathname-defaults* :glacier-cams) :direction :input)
 					  (read fi)
 				 (read fi)))
 			   url))
@@ -710,6 +710,7 @@
 				nil))))
 	(debugc 5 (xlogntf "cdsdn:  new file name ~a" newfn))
 	newfn))
+
 (defun test-calc-date-structured-directory-name (&optional (elem "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg"))
   (calc-date-structered-directory-name (calc-path (calc-dir-from-tokens (tokenize1 elem #\-))) ))
 
@@ -1041,9 +1042,7 @@
 						  (incf *errors-encountered*)
 						  (move-file-to-delete top "broken-images")
 						  (xlogntf "cd: on image ~a, skipping~%error: ~a" top e)))
-					  
-					  (setf top ni))
-					))
+					  (setf top ni))))
 			  (debugc 5 (xlogntf "delete: ~a" *delete-these-files*))
 			  (delete-files-from-list *delete-these-files* )
 			  (xlogntft "~a images viewed ~a images deleted ratio ~6,2,f" 
