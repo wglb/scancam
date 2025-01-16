@@ -315,13 +315,12 @@
 
 (defun list-cams-and-directories (which)
   (let ((fn (get-config-rescan *default-pathname-defaults* which)))
-	(cond  ((null fn)
-			(xlogntft "lcad: No camera entry for ~s: " which)
-			nil)
-		   ((probe-file fn)
+	(cond ((and fn (probe-file fn))
 			(with-open-file (fi fn :direction :input)
 			  (read fi)))
-		   (t (xlogntft "lcad: No camera file for ~s: " which)
+		   (t 
+			(xlogntft "lcad: No camera file for ~s: " which)
+			(error "lcad: No camera file for ~s: " which)
 			  nil))))
 
 (defun all-image-directories ()
