@@ -661,21 +661,23 @@
 		(remove-duplicates-by-hash newpn)))
 	(compare-directory camera-directory)))
 
+(defun cleanup-all-cameras (cams)
+  "Remove dups and similars for all cameras"
+  (xlogntf "cac: there are ~a cameras to process" (length cams))
+  (mapc #'(lambda (camera-directory)
+			(cleanup-one-camera camera-directory))
+		cams)
+  (file-away-auxiliary-mass))
+
 (defun  end-of-day-cleanup (args)
   "Clean up similar images, duplicate images, and file away many things."
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t)
 	(restore-config-file-list)
 	(log-version-number "eod")
 	(cond ((null args)
-		   (let ((*trace-output* (the-log-file))
-				 (cams (all-image-directories)))
-			 (xlogntf "eodc: there are ~a cameras to process" (length cams))
+		   (let ((*trace-output* (the-log-file)))
 			 (time
-			  (progn
-				(mapc #'(lambda (camera-directory)
-						 (cleanup-one-camera camera-directory))
-					  cams)
-				(file-away-auxiliary-mass)))
+			  (cleanup-all-cameras (all-image-directories)))
 			 #+nil (delete-prod-darkfiles (yesterday)))) ;; TODO --may happen before midnight. move to its own cron driven process
 		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
 	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
