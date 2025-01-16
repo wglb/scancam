@@ -30,7 +30,6 @@
     (setf (gethash hash *sha1-hash-table*) res)))
 
 (defun simple-digest (fn)
-  ;; TODO - do we really need the file write date?
   (if (probe-file fn)
 	  (with-open-file (fi fn :element-type '(unsigned-byte 8)) 
 		(let ((dig (digest-stream :sha1 fi))
@@ -55,7 +54,7 @@
 							   element-count 
 							   directory-name))
 			(when (plusp element-count)
-			  (with-open-file (fo "unfiled-directory-count.txt" :direction :output :if-exists :append :if-does-not-exist :create) ;; TODO AHA!!!! here is the clprit. Please fix this
+			  (with-open-file (fo "unfiled-directory-count.txt" :direction :output :if-exists :append :if-does-not-exist :create)
 				(format fo "~a dir ~a~%" element-count directory-name)
 				(debugc 5 (xlogntf "~a dir ~a" element-count directory-name))))
 			(cons element-count directory-name)))
@@ -65,9 +64,6 @@
 
 (defun car-string (el)
   (uiop:native-namestring (car el)))
-
-;; TODO this is doubling up concepts. being used to copy a file to a directory with new file name.
-;; logic not supporting that
 
 (defparameter *deleting-not-moving* nil)
 
@@ -120,7 +116,7 @@
 	
 	(file-hashes
 	 (cond ((consp cl)
-			(dolist (ix cl)	;; TODO--this is not tested
+			(dolist (ix cl)
 			  (setf files (make-list-files (directory ix) files)))
 			(setf all-files files)
 			files)

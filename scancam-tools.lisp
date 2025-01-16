@@ -48,7 +48,7 @@
 
 (defparameter *dirs-to-visit* nil)
 
-(defun collect-year (basename &optional (deb nil)) ;; TODO -- move to general *.lisp
+(defun collect-year (basename &optional (deb nil))
   (setf *dirs-to-visit* nil)
   (let* ((pndr (pathname-directory basename))
 		 (basename-last (car (last pndr))))

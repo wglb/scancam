@@ -212,7 +212,7 @@
 
 
 (defun delete-dark-files-directory (&optional (dir *default-pathname-defaults*))
-  " TODO: call this in separate thread independent of main"
+  "Move to delete-dark for each file that is 'dark'"
   (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
 		 (summary nil)
 		 (highest 0)
@@ -368,7 +368,6 @@
 
 (defun get-one-glacier-park (pair)
   "Get one image from a glacier-park type camera"
-  ;; TODO: callers should note the return value and add up
   (let ((the-directory  `( :relative ,(car pair))))
 	(with-open-log-file ((format nil "~a-~a" "rwis-glacier" (car pair)) :dir the-directory  :show-log-file-name t) ;; too many  logs before :dates :hms
 	  (log-version-number (format nil "get-one-glacier-park ~a" (car pair)))
@@ -477,7 +476,6 @@
   (xlogntf "dwdtdd: ~a duplicates deleted" *duplicate-images-deleted*))
 
 (defun write-unfiled-count (all-cams)
-  "TODO - make this a lsp format file"
   (with-open-file (fo "unfiled-directory-count.txt" 
 					  :direction :output
 					  :if-exists :supersede
@@ -499,7 +497,7 @@
 							(with-open-file (fi last-run)
 							  (read fi))
 							nil))
-		 (elapsed (if  (and last-time-run (consp last-time-run ) ) ;; TODO check if this .last-run is a list
+		 (elapsed (if  (and last-time-run (consp last-time-run ) ) ;; TODO use local-time for this
 					   (+ (- (second hour-minute) (second last-time-run)) (* 60 ( - (first hour-minute) (first last-time-run))))
 					   nil))
 		 (time-to-run (if elapsed
@@ -511,7 +509,7 @@
 	(debugc 5 (if last-time-run
 				  (xlogntf "t3: diff is ~a" elapsed)))
 	(cond (time-to-run
-		   (with-open-file (fo ".last-run" :direction :output :if-exists :supersede :if-does-not-exist :create) ;; TODO simplify this code
+		   (with-open-file (fo ".last-run" :direction :output :if-exists :supersede :if-does-not-exist :create)
 			 (write hour-minute :stream fo)))
 		  (t (xlogntf "t3: Not running RWIS this time, elapsed is ~a" elapsed)))
 	time-to-run))
@@ -536,7 +534,7 @@
 (defun try-pendroy-new-raw ()
   (cond ((get-rwis-home-page "current-new") 
 		 (find-images-new-home-page *saved-home-page*)
-		 (with-open-file (fod "live-directories.lsp"  ;; TODO This is redundant with 'images-by-camera, but not as up to date
+		 (with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
 							  :direction :output :if-exists :supersede :if-does-not-exist :create)
 		   (write (all-image-directories) :stream fod)))
 		(t (xlogntft "tpn: home page fetch failure"))))
@@ -546,7 +544,7 @@
 	  (handler-case
 		  (progn
 			(find-images-new-home-page *saved-home-page*)
-			(with-open-file (fod "live-directories.lsp"  ;; TODO This is redundant with 'images-by-camera, but not as up to date
+			(with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
 								 :direction :output :if-exists :supersede :if-does-not-exist :create)
 			  (write (all-image-directories) :stream fod)))
 		(error (e)
@@ -655,7 +653,7 @@
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t :dir `(:relative ,camera-directory))
 	(remove-duplicates-by-hash camera-directory)
 	(dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
-	  (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; TODO -- new code
+	  (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; 
 		(xlogntf "eodc: Going to ~s for deletion" newpn)
 		(remove-duplicates-by-hash newpn)))
 	(compare-directory camera-directory)))
@@ -676,8 +674,7 @@
 	(cond ((null args)
 		   (let ((*trace-output* (the-log-file)))
 			 (time
-			  (cleanup-all-cameras (all-image-directories)))
-			 #+nil (delete-prod-darkfiles (yesterday)))) ;; TODO --may happen before midnight. move to its own cron driven process
+			  (cleanup-all-cameras (all-image-directories))))) 
 		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
 	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
   (xlogntf " eod: ~a errors encounterd" *errors-encountered*))
@@ -785,7 +782,7 @@
   (with-open-log-file ("file-aux")
 	(dolist (dx (all-image-directories))
 	  (with-open-log-file ("file-aux" :dir `(:relative ,dx) :show-log-file-name t)
-		(file-away-auxiliary dx) ;; TODO this doesn't quite do it.
+		(file-away-auxiliary dx) 
 		(remove-duplicates-by-hash dx)))))
 
 (defun file-away-override (args)
@@ -1015,7 +1012,6 @@
 
 (defun compare-directory ( &optional (dir "Pendroy/2024/05/30/") ) 
   "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30"
-  ;; TODO calcuate ratio of files considered same to number left and report.
   (let* ((full-dir-namestring (namestring (uiop:ensure-directory-pathname dir)))
 		 (sameness-threshold (init-compare dir)))
 	(if (and sameness-threshold (plusp sameness-threshold))
@@ -1097,14 +1093,14 @@
 			(setf largest df)))))
     (format t "we had ~a out of range out of ~a, largest ~a~%" count total largest)))
 
-;; TODO: here is a good reference site for web cameras:
+;;  here is a good reference site for web cameras:
 
 ;; http://www.bigskyfishing.com/Web-Cams/Web-Cams.htm#regional
 ;; one of the lincoln cameras, drilled down: http://www.linctel.net/~jaimej26/images/webcam1.jpg (deep link)
 ;; http://www.bigskyfishing.com/Web-Cams/Web-Cams.htm
 
-;; TODO apgar works with minute
-;; goat haunt works with minute
+;; apgar works with minute
+;; goat haunt works with minute. If it works at all
 ;; arizona works with minute
 ;; middlefork works with minute
 ;; park headquaaarters looks more like 2 mins

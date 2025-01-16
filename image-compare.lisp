@@ -71,7 +71,7 @@
 					  (declare (single-float ans1 ans1 ans3))
 					  (when deleted 
 						(incf *similar-images-deleted*)
-						(push image2 *delete-these-files*)) ;; TODO fix this to return a value
+						(push image2 *delete-these-files*))
 					  
 					  (incf *images-viewed* 1)
 					  (incf *global-images-viewed* 1)
@@ -165,7 +165,7 @@
 			  (let* ((factor1 (/ 255.0 (float max-rgb1)))
 					 (factor2 (/ 255.0 max-rgb2))
 					 (factor3 (/ 255.0 max-rgb3))
-					 (bucket-size 32) ;; TODO cleanup this is  more global
+					 (bucket-size 32) ;; should this be a config parameter?
 					 (buckets (* 3 (/ 256 bucket-size)))
 					 (category-array (make-array (list buckets) :initial-element 0 :element-type 'fixnum)))
 				(xlogntf "si: bucket-size ~a bucket  ~a factors ~4f ~4f ~4f" bucket-size buckets factor1 factor2 factor3)
@@ -226,8 +226,7 @@
 				  (with-open-file (fo new-file-name-attributes :direction :output :if-exists :append :if-does-not-exist :create)
 					(write (list tail buckets bucket-size category-array floatized) :stream fo))
 				  (xlogntf "s1: tail ~a" tail)))
-			  (write-image-to-file new-file-name :image new-image :if-exists :supersede)))
-		  )))))
+			  (write-image-to-file new-file-name :image new-image :if-exists :supersede))))))))
 
  (defun calc-average-debug (fn)
   (xlogntf "cad: calcing on ~a size ~a" (probe-file fn) (sb-posix:stat-size (sb-posix:stat fn)))
@@ -430,7 +429,7 @@
 
 (defun subtract-dir (dir)
   "Used only from the command line"
-  (setf *subtracted-images-deleted* 0) ;; TODO if we do archive, move this reset.
+  (setf *subtracted-images-deleted* 0) 
   (with-open-log-file ("test-many-sub" :dates :hms :dir dir)
 	(setf *subtract-threshold* (get-config-rescan dir :subtract))
 	(xlogntf "sd: threshold=~a" *subtract-threshold*)
@@ -449,9 +448,8 @@
 		 (subtract-dir *directory*))
 		(t (xlogntf "subtract-dir-new: Unexpected args. Processing halted ~s" args))))
 
-(defun delete-files-from-list (delete-these-files &optional (del-folder "delete-similar") ) ;; TODO parameter to say target directory, parameter for list
+(defun delete-files-from-list (delete-these-files &optional (del-folder "delete-similar"))
   (dolist (ix delete-these-files)
-	;; (curpath (pathname-directory ix))
 	(incf *global-images-deleted*)
 	(move-file-to-delete ix del-folder)))
 

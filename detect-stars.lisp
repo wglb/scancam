@@ -137,7 +137,7 @@
 				  (when (> max-brightness-diff brightness-diff-thresh)
 					(debugc 5 (xlogntf "fbsi: max-brightness-diff=~a max-brightness-diff-wide=~a ans over brightness-diff-thresh=~a" 
 									   max-brightness-diff max-brightness-diff-wide brightness-diff-thresh))
-					(when  (<= max-brightness-diff-wide brightness-diff-thresh) ;; TODO -- why less?  Ah, because this is the edges.
+					(when  (<= max-brightness-diff-wide brightness-diff-thresh)
 					  (push (list x y max-brightness-diff) hits)
 					  (debugc 5 (xlogntf "fbsi: pushing ~s" (list x y max-brightness-diff)))))
 				  bright-center)))))))
@@ -153,8 +153,7 @@
 	  (dotimes (yy 10)
 		(draw-line 0 (* yy yincr) width (*  yy yincr) :color 255 :image new-image)))))
 
-(defun find-bright-spots (fn delt brightness-diff-thresh cluster-limit overlap-thresh) ;; use cluster limit TODO
-  (declare (ignorable cluster-limit))
+(defun find-bright-spots (fn delt brightness-diff-thresh cluster-limit overlap-thresh) 
   (with-image-from-file (img fn :jpg)
 	(multiple-value-bind (width height)
 		(image-size img)
