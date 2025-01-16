@@ -180,7 +180,7 @@
 				(with-open-file (fo fn :direction :output :if-exists :append :if-does-not-exist :create)
 				  (if do-title
 					  ;; Vid-000629001-00-03-2021-06-06-13-22.jpg  :      121.523,      45.931,     123.231,     121.659,     119.542,      48.743,      48.744,      63.264,  921600.000,111995860.000,
-					  (format fo "~42a: ~{~14,3,a ~}~%" "file name" (list "avg" "delts" "rgb1a" "rgb2a" "rgb3a" "right dev" "down dev" "total dev" "wxh" "sum") ))
+					  (format fo "~42a:        ~{~14,3,a ~}~%" "file name" (list "avg" "delts" "rgb1a" "rgb2a" "rgb3a" "right dev" "down dev" "total dev" "wxh" "sum") ))
 				  (write-line (format nil "~42a: ~{~14,3,f,~}" (file-namestring long-fn) average ) fo)
 				  (debugc 5 (xlogntf "cfdd: darkness: ~a: ~{~f, ~}" (file-namestring long-fn) average )))))
 			
@@ -944,8 +944,7 @@
 			   (cons "~2,'0D-" day)
 			   (cons "~2,'0D-" hour)
 			   (cons "~2,'0D-" minute)
-			   (cons "~2,'0D" aux)
-			   ))
+			   (cons "~2,'0D" aux)))
 		 (ofn (format nil "~4,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~a-~a"
 					  year month day
 					  hour minute aux
@@ -1017,13 +1016,12 @@
 (defun compare-directory ( &optional (dir "Pendroy/2024/05/30/") ) 
   "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30"
   ;; TODO calcuate ratio of files considered same to number left and report.
-  (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
-		 (log-fn (slashes-to-hyphens full-dir-namestring))
+  (let* ((full-dir-namestring (namestring (uiop:ensure-directory-pathname dir)))
 		 (sameness-threshold (init-compare dir)))
 	(if (and sameness-threshold (plusp sameness-threshold))
-		(with-open-log-file ((format nil "comp-dir~a" log-fn) 
+		(with-open-log-file ("comp-dir" 
 							 :dates t 
-							 :dir (pathname-directory (uiop:ensure-directory-pathname dir))) ;; TODO: wow
+							 :dir full-dir-namestring) 
 		  (let ((*trace-output* (the-log-file))
 				(*error-output* (the-log-file)))
 			(progn
