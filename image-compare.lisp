@@ -465,7 +465,7 @@
 (defun init-compare (dir)
   "Dir is relative, e.g., 'Pendroy'"
   (let  ((sameness-thresshold
-		   (get-config-rescan dir :sameness)))
+		   (get-config-rescan (uiop:ensure-directory-pathname dir) :sameness)))
 	(xlogntf "ic: sameness thresh ~a" sameness-thresshold)
 	(setf  *images-viewed* 0)
 	(setf  *similar-images-deleted* 0)
