@@ -125,19 +125,22 @@
 		(setf (gethash (first cx) *all-config-files* ) (second cx))))))
 
 (defun get-config-rescan (dr prop &key (debug nil))
-  "get config from scancam.lsp. dr is relative in string form. Save dir and pathname in hash"
-  (let* ((dir (make-pathname :directory (pathname-directory dr)))
+  "get config from scancam.lsp. dr is starting directory relative in string form. Save dir and pathname in hash"
+  (let* ((dir (make-pathname :directory (pathname-directory (uiop:ensure-directory-pathname dr))))
 		 (cfn (make-pathname :name "rescancam" :type "lsp"))
 		 (configpn (merge-pathnames dir (make-pathname :name "rescancam" :type "lsp"))))
 	(if debug
-		(xlogntf (xlogntf "gcr: dir ~s configfn ~s" dr configpn)))
+		(xlogntf (xlogntf "gcr: dir ~s configpn ~s" dir configpn)))
 	(multiple-value-bind (ans cdir)
 		(get-config cfn prop :dir dir :debug  debug)
-	  (setf (gethash dr *all-config-files* nil) cdir)
-	  (if debug (xlogntft "gcr: cfn ~s ans is ~s type is ~s" cfn ans (type-of ans)))
+	  (setf (gethash dir *all-config-files*) (if (probe-file configpn)
+												 configpn
+												 :nil))
+	  (if debug (xlogntft "gcr: cfn ~s ans is ~s cdir is ~s" cfn ans cdir))
 	  (if (eql (type-of ans) 'SYMBOL)
 		  (format nil "~s" ans)
 		  ans))))
+
 
 (defun get-darkness-threshold (cl)
   (let ((ans (get-config-rescan cl :average)))
