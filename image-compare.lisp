@@ -328,7 +328,7 @@
 				   (delta-down 0)
 				   (total-delta 0))
 			  (declare (fixnum delta-right delta-down total-delta))
-			  (dotimes (x (1- width))
+			  #+nil (dotimes (x (1- width)) ;; not currently used; likely to save some time
 				(dotimes (y (1- height))
 				  (let* ((pix (get-pixel x y :image img))
 						 (pixr (get-pixel (1+ x) y :image img))
