@@ -144,9 +144,12 @@
 
 (defun get-darkness-threshold (cl)
   (let ((ans (get-config-rescan cl :average)))
-	(if ans
-		ans
-		0)))
+	(if (consp ans)
+		(car ans)
+		(if ans
+			ans
+			0))))
+
 
 ;;;; ------------------------------------------------------------------------------------------
 
@@ -212,7 +215,6 @@
 	(if (char= #\- (char ans l-1))
 		(subseq ans 0 l-1)
 		ans)))
-
 
 (defun delete-dark-files-directory (&optional (dir *default-pathname-defaults*))
   "Move to delete-dark for each file that is 'dark'"
