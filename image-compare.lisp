@@ -462,13 +462,15 @@
 
 (defun init-compare (dir)
   "Dir is relative, e.g., 'Pendroy'"
-  (let  ((sameness-thresshold
+  (let  ((sameness-threshold
 		   (get-config-rescan (uiop:ensure-directory-pathname dir) :sameness)))
-	(xlogntf "ic: sameness thresh ~a" sameness-thresshold)
+	(xlogntf "ic: sameness thresh ~a" sameness-threshold)
 	(setf  *images-viewed* 0)
 	(setf  *similar-images-deleted* 0)
 	(setf  *delete-these-files* nil)
-	sameness-thresshold))
+	(if (consp sameness-threshold)
+		(car sameness-threshold)
+		sameness-threshold)))
 
 (defun compare-images-test-different ()
   (let  ((one (car (last (directory "/home/data6/webcams/pendroy/scancam/pendroy/*.jpg" ))))
