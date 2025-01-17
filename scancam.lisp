@@ -1015,12 +1015,13 @@
 
 (defun compare-directory ( &optional (dir "Pendroy/2024/05/30/") ) 
   "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30"
-  (let* ((full-dir-namestring (namestring (uiop:ensure-directory-pathname dir)))
+  (let* ((sure-directory (uiop:ensure-directory-pathname dir))
+		 (full-dir-namestring (namestring sure-directory))
 		 (sameness-threshold (init-compare dir)))
 	(if (and sameness-threshold (plusp sameness-threshold))
 		(with-open-log-file ("comp-dir" 
 							 :dates t 
-							 :dir full-dir-namestring) 
+							 :dir (pathname-directory sure-directory)) 
 		  (let ((*trace-output* (the-log-file))
 				(*error-output* (the-log-file)))
 			(progn
