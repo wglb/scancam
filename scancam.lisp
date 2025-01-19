@@ -909,7 +909,10 @@
 		(let* ((ans (dex-get uri :binary t))
 			   (body (dexans-body ans))
 			   (headers (dexans-headers ans))
-			   (content-type (gethash "content-type" headers)))
+			   (content-type (if headers
+								 (gethash "content-type" headers)
+								 nil)))
+		  
 		  (xlogntf "content type ~s" content-type)
 		  (setf *last-body* body)
 		  (handler-case
@@ -917,12 +920,12 @@
 				  (write-image-file full body) ;; TODO -- logic surrounding this needs to be used wherever write-image is called
 				  (xlogntf "pw: non-image response for ~s, content-type is ~s, status code is ~s" uri content-type (dexans-status-code ans)))
 			(error (e)
-			  (xlogntft "pw: botch ~s on ~s, header type ~s" e uri
-						(if headers
-							(gethash "content-type" headers "whoops")
-							"double whoops"))))))
+			  (xlogntft "pw: botch ~s on ~s, header type ~s" 
+						e
+						uri
+						content-type)))))
 	(error (q)
-	  (xlogntft "pull-rwis barf on base ~s error ~s cameras ~s" base q *cameras-polled*))))
+	  (xlogntft "pull-rwis barf on base ~s~% error ~s cameras ~s" base q *cameras-polled*))))
 
 (defun calc-path (fn-tokesa)
   (let* ((dir (first fn-tokesa))
