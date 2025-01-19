@@ -285,7 +285,7 @@
 									  :element-type '(unsigned-byte 8))
 			(write-sequence body fo)))
 	  (error (q)
-		(progn (xlogf "oh, we are error, q~s" q)
+		(progn (xlogf "wif: oh, we are error, q~s" q)
 			   (xlogntft "wif: botch on write-image-file for ~a~%error ~a" long-fn q))))))
 
 (defparameter *camera-map* nil)
@@ -908,20 +908,19 @@
 		(ensure-directories-exist full) 
 		(let* ((ans (dex-get uri :binary t))
 			   (body (dexans-body ans))
-			   (headers (dexans-headers ans)))
-		  (xlogntf "content type ~s" (if headers
-										 (gethash "content-type" headers "whoops")
-										 "double whoops"))
-		  
-		  
+			   (headers (dexans-headers ans))
+			   (content-type (gethash "content-type" headers)))
+		  (xlogntf "content type ~s" content-type)
 		  (setf *last-body* body)
 		  (handler-case
-			  (write-image-file full body)
+			  (if (string= "image/jpeg" content-type)
+				  (write-image-file full body) ;; TODO -- logic surrounding this needs to be used wherever write-image is called
+				  (xlogntf "pw: non-image response for ~s, content-type is ~s, status code is ~s" uri content-type (dexans-status-code ans)))
 			(error (e)
 			  (xlogntft "pw: botch ~s on ~s, header type ~s" e uri
-					   (if headers
-						   (gethash "content-type" headers "whoops")
-						   "double whoops"))))))
+						(if headers
+							(gethash "content-type" headers "whoops")
+							"double whoops"))))))
 	(error (q)
 	  (xlogntft "pull-rwis barf on base ~s error ~s cameras ~s" base q *cameras-polled*))))
 
