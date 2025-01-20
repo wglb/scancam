@@ -96,7 +96,7 @@
 		(cons :find-time-gaps 'find-time-gaps-c)
 		(cons :del-dark-files 'dark-files-archive-directories)
 		(cons :detect-stars 'detect-stars-new)
-		(cons :delete-dark-files 'delete-prod-darkfiles)
+		(cons :delete-dark-files 'move-prod-darkfiles)
 		(cons :delete-similar-files 'compare-directory-new) 
 		(cons :end-of-day 'end-of-day-cleanup)
 		(cons :end-of-day-test 'end-of-day-cleanup-test)

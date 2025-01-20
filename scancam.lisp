@@ -153,7 +153,7 @@
 
 ;;;; ------------------------------------------------------------------------------------------
 
-(defun chk-for-delete-darkness (long-fn)
+(defun chk-for-move-darkness (long-fn)
   "Calculate the average darkness and decide based on configuration value of threshold whether it goes to dark files. If threshold not specified, don't file dark files away"
   (debugc 5 (xlogntf "cfdd: long-fn ~s" long-fn))
   (if (probe-file long-fn)
@@ -166,7 +166,7 @@
 				 (thresh (get-darkness-threshold dir))
 				 (avg (first average))
 				 (delta-sum (second average))
-				 (tst-thresh (if (consp thresh) ;; TOCO review this logic
+				 (tst-thresh (if (consp thresh)
 								 (first thresh)
 								 thresh))
 				 (deltas-thresh (if (consp thresh)
@@ -196,11 +196,11 @@
 				   (let ((err (move-file-to-delete long-fn "delete-darkness")))
 					 (cond ((zerop err)
 							(incf delete-count)
-							(incf *dark-images-deleted*))
+							(incf *dark-images-moved*)) 
 						   (t (incf *errors-encountered* ))))
 				   (debugc 5 (xlogntf "cfdd: ~a av=~7,3,f delta sum=~7,3,f deltas-thresh=~7,3,f avgt ~a delt ~a ~a" 
 									  long-fn avg delta-sum deltas-thresh below-avg-thresh below-deltas-thresh
-									  "deleted")))
+									  "moved")))
 				  (t 
 				   (debugc 5 (xlogntf "cfdd: unmatch ~a av:~7,3,f del sum,:~7,3,f deltas-thresh ~7,3,f  " long-fn avg delta-sum deltas-thresh))))
 			(list average rv delete-count))
@@ -216,10 +216,11 @@
 		(subseq ans 0 l-1)
 		ans)))
 
-(defun delete-dark-files-directory (&optional (dir *default-pathname-defaults*))
-  "Move to delete-dark for each file that is 'dark'"
+(defun move-dark-files-directory (&optional (dir *default-pathname-defaults*))
+  "Move to move-dark for each file that is 'dark'"
   (let* ((full-dir-namestring (namestring (merge-pathnames dir)))
 		 (summary nil)
+		 (dird (uiop:ensure-directory-pathname dir))
 		 (highest 0)
 		 (lowest (expt 2 24))
 		 (local-deleted 0)
@@ -227,15 +228,15 @@
 		 (full nil))
 	(xlogntf "full-dir-namestring is ~s" full-dir-namestring)
 	(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
-	(with-open-log-file ("ddarkfi-dir" :dir (list :relative dir) :show-log-file-name t)
-	  (log-version-number "ddfd: delete-dark-files-directory")
+	(with-open-log-file ("ddarkfi-dir" :dir (pathname-directory dird) :show-log-file-name t)
+	  (log-version-number "ddfd: move-dark-files-directory")
 	  (setf full (directory (concatenate 'string full-dir-namestring "/*.jpg")))
 		(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
 		(if (and (not (consp darkness-th)) (zerop darkness-th))
 			(xlogntf "ddfd: no threshold, gonna save some time")
 			(dolist (nf full)
 			  (incf *global-images-viewed*)
-			  (let* ((answ (chk-for-delete-darkness nf))
+			  (let* ((answ (chk-for-move-darkness nf)) ;;(chk-for-delete-darkness)
 					 (ans (first answ))
 					 (text (second answ)))
 				(if (third answ)
@@ -251,14 +252,15 @@
 					  (if (and avg (> avg highest))
 						  (setf highest avg)))))))
 	  (xlogntf "ddfd: we have ~a images to check" (length full))
-	  (xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) ))
+	  (xlogntf "ddfd: There were ~a dark files moved out of ~a" local-deleted (length full) ))
 	(xlogntf "ddfd: low=~a high=~a" lowest highest)
-	(xlogntf "ddfd: There were ~a dark files deleted out of ~a" local-deleted (length full) )
+	(xlogntf "ddfd: There were ~a dark files moved out of ~a" local-deleted (length full) )
 	nil)) 
 
-(defun delete-prod-darkfiles (&optional (date-str nil))
+(defun move-prod-darkfiles (&optional (date-str nil))
   "Delete dark files (and potentially look for stars), most often for yesderday."
-  (with-open-log-file ("delete-darkfiles-batch" :show-log-file-name nil)
+  (setf *dark-images-moved* 0)
+  (with-open-log-file ("move-darkfiles-batch" :show-log-file-name nil)
 	(let ((adate (if date-str
 					 date-str
 					 (yesterday))))
@@ -266,8 +268,16 @@
 	  (let ((*trace-output* (the-log-file)))
 		(time
 		 (mapc #'(lambda (cam)
-				   (delete-dark-files-directory (concatenate 'string (car cam) "/" adate)))
-			   (images-by-camera)))))))
+				   (move-dark-files-directory (concatenate 'string (car cam) "/" adate)))
+			   (images-by-camera)))))
+	(xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str)))
+
+(defun dark-files-archive (basedir)
+  (setf *dark-images-moved* 0)
+  (with-open-log-file ("dark-files-archive" :dir basedir :show-log-file-name nil)
+	(mapc #'(lambda (dir)
+			  (move-dark-files-directory dir))
+		  (collect-year basedir))))
 
 (defparameter *last-body* nil)
 
@@ -598,7 +608,7 @@
 	  (set-alert-file-name "scancam")
 	  (log-version-number "t3:==================== scancam (try-three) ")
 	  (setf *images-pulled* 0)
-	  (setf *dark-images-deleted* 0)
+	  (setf *dark-images-moved* 0)
 	  (xlogf "Begin run")
 	  (cond ((lockme "scancam")
 			 (xalertf "t3: locked ok")
@@ -615,7 +625,7 @@
 			   (unlockme "scancam"))
 			 (xalertf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
 					  *images-pulled*
-					  *dark-images-deleted*
+					  *dark-images-moved*
 					  *duplicate-images-deleted*
 					  *similar-images-deleted*
 					  *cameras-polled*
@@ -632,7 +642,7 @@
 	(xlogf "scancam (try-three) done ~a" (version-number-string "try-three"))
 	(xlogntf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
 			 *images-pulled*
-			 *dark-images-deleted*
+			 *dark-images-moved*
 			 *duplicate-images-deleted*
 			 *similar-images-deleted*
 			 *cameras-polled*
@@ -818,7 +828,7 @@
 (defvar *file-away-override*)
 (defvar *file-away-archive*)
 (defvar *delete-similar-files-archives*)
-(defvar *delete-dark-files*)
+#+nil (defvar *delete-dark-files*)
 
 (defparameter *camera-home-page* nil)
 
