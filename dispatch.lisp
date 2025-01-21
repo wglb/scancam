@@ -101,6 +101,7 @@
 		(cons :end-of-day 'end-of-day-cleanup)
 		(cons :end-of-day-test 'end-of-day-cleanup-test)
 		(cons :subtract-dir 'subtract-dir-new)
+		(cons :dark-files-archive 'dark-files-archive)
 		(cons :help 'show-opts)
 		(cons :file-away-mass 'file-away-mass)
 		(cons :file-away-auxiliary-mass 'file-away-auxiliary-mass)
@@ -112,14 +113,13 @@
 (defun chk-for-trigger ()
   (trigger-file-hard "scancam"))
 
-
 (defun time-chk ()
   (multiple-value-bind (s min h d m y)
 	  (decode-universal-time (get-universal-time))
 	(declare (ignorable d m y))
 	(list h min s)))
 
-(defun run-till-trigger (&optional (interv 300))
+#+nil (defun run-till-trigger (&optional (interv 300))
   (with-open-log-file ("scancam-trigger")
 	(let ((stopping nil)
 		  (*trace-output* (the-log-file)))
