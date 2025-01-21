@@ -226,7 +226,6 @@
 		 (local-deleted 0)
 		 (darkness-th (get-darkness-threshold full-dir-namestring))
 		 (full nil))
-	(xlogntf "full-dir-namestring is ~s" full-dir-namestring)
 	(xlogntf "ddfd: We got a darkness value of ~a" darkness-th)
 	(with-open-log-file ("ddarkfi-dir" :dir (pathname-directory dird) :show-log-file-name t)
 	  (log-version-number "ddfd: move-dark-files-directory")
@@ -252,9 +251,15 @@
 					  (if (and avg (> avg highest))
 						  (setf highest avg)))))))
 	  (xlogntf "ddfd: we have ~a images to check" (length full))
-	  (xlogntf "ddfd: There were ~a dark files moved out of ~a" local-deleted (length full) ))
+	  (xlogntf "ddfd: ~a" (if (zerop local-deleted)
+							  "No dark files moved"
+							  (format nil "There were ~a dark files moved" local-deleted))))
 	(xlogntf "ddfd: low=~a high=~a" lowest highest)
-	(xlogntf "ddfd: There were ~a dark files moved out of ~a" local-deleted (length full) )
+	(xlogntf "ddfd: There were ~a dark files moved out of ~a" 
+			 (if (zerop local-deleted)
+				 "no"
+				 local-deleted)
+			 (length full))
 	nil)) 
 
 (defun move-prod-darkfiles (&optional (date-str nil))
@@ -272,9 +277,12 @@
 			   (images-by-camera)))))
 	(xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str)))
 
-(defun dark-files-archive (basedir)
+(defun dark-files-archive (&optional (basedir nil))
+  (if (null basedir)
+	  (setf basedir *directory*))
+  (xlogntf "dark-files-archive, basedir ~s, or is it ~s" basedir *directory*)
   (setf *dark-images-moved* 0)
-  (with-open-log-file ("dark-files-archive" :dir basedir :show-log-file-name nil)
+  (with-open-log-file ("dark-files-archive" :dir (pathname-directory basedir) :show-log-file-name nil)
 	(mapc #'(lambda (dir)
 			  (move-dark-files-directory dir))
 		  (collect-year basedir))))

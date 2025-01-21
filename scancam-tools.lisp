@@ -4,7 +4,7 @@
 
 (defparameter *images-pulled* 0)
 
-(defparameter *dark-images-moved*o 0)
+(defparameter *dark-images-moved* 0)
 (declaim (fixnum *dark-images-moved*))
 (defparameter *subtracted-images-deleted* 0)
 (defparameter *duplicate-images-deleted* 0)
