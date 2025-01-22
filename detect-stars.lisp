@@ -69,7 +69,7 @@
 					   far-rect)))
 	far-rect))
 
-(defparameter *draw-grid* nil)
+(defparameter *draw-grid* t)
 
 (defun find-clusters (candidates delt)
   "answer a list of sublists (with size as first element) of clusters within a delta of each other"
@@ -144,14 +144,105 @@
 	(append possibles (list (reverse hits)))))
 
 (defun draw-grid-maybe (width height new-image)
-  (when *draw-grid*
-	(let ((xincr (floor (/ width 10)))
+  (when *draw-grid*)
+  (let ((xincr (floor (/ width 10)))
 		  (yincr (floor (/ height 10))))
 	  (xlogntf "dgm: xincr ~a yincr ~a" xincr yincr)
 	  (dotimes (xx 10)
-		(draw-line (* xx xincr ) 0 (* xx xincr) height :color 255 :image new-image))
+		(draw-line (* xx xincr ) 0 (* xx xincr) height :color (* 8 500) :image new-image))
 	  (dotimes (yy 10)
-		(draw-line 0 (* yy yincr) width (*  yy yincr) :color 255 :image new-image)))))
+		(draw-line 0 (* yy yincr) width (*  yy yincr) :color (* 8 500) :image new-image))))
+
+(defun floor3 (pix)
+  (floor (/ (+ (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)) 3.0)))
+
+(defun calc-glob (x y img)
+  (cond ((or (minusp x) (minusp y))
+		 nil)
+		(t
+		 (let* ((center (floor3 (get-pixel x y :image img)))
+				(top (floor3 (get-pixel  x (1+ y) :image img)))
+				(bottom (floor3 (get-pixel x (1- y) :image img )))
+				(right (floor3 (get-pixel (1+ x) y  :image img)))
+				(left (floor3 (get-pixel (1- x) y :image img ) )))
+		   (+ (- center top)
+			  (- center bottom)
+			  (- center right)
+			  (- center left))))))
+
+; experiment with (detect-stars-in-file-brightness "Pendroy/star" "301001-01-2025-01-07-17-45-4.jpg" 1)
+
+(defun show-array (ray desc)
+  (xlogntf "Array ~s, dimensions ~s" (array-dimensions ray) desc)
+  (let ((dims (array-dimensions ray))
+		(*print-pretty* nil))
+	(dotimes (i (first dims))
+	  (dotimes (j (second dims))
+		(format (the-log-file) "~15s" (aref ray i j)))
+	  (format (the-log-file) "~%"))))
+
+(defun calc-histogram (rect img)
+  (let ((ray (make-array 256 :initial-element 0))
+		(red (make-array 256 :initial-element 0))
+		(blue (make-array 256 :initial-element 0))
+		(green (make-array 256 :initial-element 0))
+		(glob (make-array (list (1+ (- (fourth rect) (second rect))) (1+ (- (third rect) (first rect)))) :initial-element 0))
+		(colors (make-array (list (1+ (- (fourth rect) (second rect))) (1+ (- (third rect) (first rect)))) :initial-element 0))
+		(bright (make-array (list (1+ (- (fourth rect) (second rect))) (1+ (- (third rect) (first rect)))) :initial-element 0))
+		(avg 0))
+	
+	(dotimes (y (- (third rect) (first rect)))
+	  (dotimes (x (- (fourth rect) (second rect)))
+		(let* ((pix (get-pixel (+ x (second rect)) (+ y (first rect)) :image img))
+			   (flo (floor (/ (+ (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)) 3.0))))
+		  (incf (aref ray flo))
+		  (ldb (byte 8 16) pix)
+		  (incf (aref red (ldb (byte 8 16) pix)) )
+		  (incf (aref blue (ldb (byte 8 8) pix)) )
+		  (incf (aref green (ldb (byte 8 0) pix)) )
+		  (let ((glo (calc-glob x y img)))
+			(when glo
+			  (setf (aref glob x y) (calc-glob x y img))
+			  (setf (aref colors x y) (list (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)))
+			  (setf (aref bright x y) (+ (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)))
+			  (incf avg (+ (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)))))
+		  (debugc 5 (xlogntf "ch: x ~s y ~s pix ~s" x y pix )))))
+	(setf avg (/ avg (* (- (third rect) (first rect)) (- (fourth rect) (second rect)) 1.0)))
+	(dotimes (y (- (third rect) (first rect)))
+	  (dotimes (x (- (fourth rect) (second rect)))
+		(setf (aref bright x y) (- (aref bright x y) avg))))
+	(xlogntf "ch: histo~%~s" ray)
+	(xlogntf "ch: red histo~%~s" red)
+	(xlogntf "ch: green hist~%~s" green)
+	(xlogntf "ch: blue histo~%~s" blue)
+	(xlogntf "ch: glob ~%~s" glob)
+	(xlogntf "ch: colors~%~s" colors)
+	(show-array colors "colors")
+	(show-array bright "brightness")
+	#+nil (let ((dims (array-dimensions colors))
+		  (*print-pretty* nil))
+	  (dotimes (i (first dims))
+		(dotimes (j (second dims))
+		  (format (the-log-file) "~15s" (aref colors i j)))
+		(format (the-log-file) "~%")))))
+
+
+(defun draw-grid-limited (width height new-image &optional (col nil) (row nil))
+  (let* ((xincr (floor (/ width 10)))
+		 (yincr (floor (/ height 10)))
+		 (red (allocate-color 255 0 0  :image new-image))
+		 (green (allocate-color 0 255 0 :image new-image))
+		 (blue (allocate-color 0 0 255 :image new-image))
+		 (black (allocate-color 0 0 0 :image new-image))
+		 (white (allocate-color 255 255 255 :image new-image))
+		 (rect (list (* col xincr)  (* row yincr) (* (1+ col) xincr) (* (1+ row) yincr)))
+		 (rect2 (list (- (* (1+ col) xincr) 40)  (+ 10 (* row yincr))   (+ 100 (* col xincr)) (- (* (1+ row) yincr) 40))))
+	(declare (ignorable red green white black))
+	(xlogntf "dgml: xincr ~a yincr ~a" xincr yincr)
+	(draw-rectangle  rect :color blue :image new-image)
+	#+nil(calc-histogram rect new-image)
+	(draw-rectangle rect2 :color red :image new-image)
+	(calc-histogram rect2 new-image)))
 
 (defun find-bright-spots (fn delt brightness-diff-thresh cluster-limit overlap-thresh) 
   (with-image-from-file (img fn :jpg)
@@ -165,7 +256,8 @@
 		  (debugc 5 (xlogntf "fbs: poss from int ~%~a" poss))
 		  (copy-image img new-image 0 0 0 0 width height) ;; ?? Dupe?
 		  (copy-palette img new-image)
-		  (draw-grid-maybe width height new-image)
+		  #+nuil (draw-grid-maybe width height new-image)
+		  (draw-grid-limited width height new-image 4 0)
 		  (let ((list-o-clusters (find-clusters (cadr poss) delt))
 				(white  (allocate-color 255 255 255 :image new-image) #+nil (find-color 0 255 0 :image new-image)))
 			(let ((sublist
@@ -210,7 +302,7 @@
 					  (xlogntf "fbs: No images ~s ~s" list-o-clusters rectangle-and-orig)
 					  nil))))))))))
 
-(defun do-find-bright-spots (file-name delt brightness-diff-thresh cluster-limit overlap-thresh)
+(defun work-find-bright-spots (file-name delt brightness-diff-thresh cluster-limit overlap-thresh)
   "Find the bright spots, and unconditionally write the parameters discovered."
   (xlogntf "ddfbs: -> file ~a delt ~a brightness-diff-threshold ~a"
 		   file-name delt brightness-diff-thresh) ;; TODO file name generation to single function
@@ -234,11 +326,11 @@
 			(overlap-thresh (get-config-rescan dir :overlap-threshold)))
 		(xlogntf "dsif: delt ~a brightness-diff-thresh ~a cluster-limit ~a overlap-thresh ~a"
 				 delt brightness-diff-thresh cluster-limit overlap-thresh)
-		(do-find-bright-spots fn delt brightness-diff-thresh cluster-limit overlap-thresh)))))
+		(work-find-bright-spots fn delt brightness-diff-thresh cluster-limit overlap-thresh)))))
 
 (defun detect-stars-in-file-brightness (dir fn count)
   "Try find brightness with range of brightness"
-  (with-open-log-file ("brightness-scan" :dir dir )
+  (with-open-log-file ("brightness-scan" :dir (pathname-directory dir) )
 	  (xlogntf "dsifb: directory ~a file ~a count ~a" dir fn count)
 	(let ((delt (get-config-rescan dir :astronomy-delt)))
 	  (when (plusp delt)
@@ -249,9 +341,10 @@
 				   delt brightness-diff-thresh cluster-limit overlap-thresh)
 		  (dotimes (bx count)
 			(let ((hcount (floor (/ count 2))))
-			  (do-find-bright-spots (format nil "~a/~a" dir fn) delt
-				(+ (- brightness-diff-thresh hcount) bx)
-				cluster-limit overlap-thresh))))))))
+			  (work-find-bright-spots 
+			   (format nil "~a/~a" dir fn) delt
+			   (+ (- brightness-diff-thresh hcount) bx)
+			   cluster-limit overlap-thresh))))))))
 
 (defun detect-stars-in-file-test (longfn)
   (setf *draw-grid* nil)
@@ -266,7 +359,7 @@
 		  (overlap-thresh (get-config-rescan dir :overlap-threshold)))
 	  (xlogntf "ds: delt ~a brightness-diff-thresh ~a cluster-limit ~a overlap-thresh ~a" delt brightness-diff-thresh cluster-limit overlap-thresh)
 	  (dolist (lx (directory (format nil "~a/*.jpg" dir)))
-		(do-find-bright-spots lx delt brightness-diff-thresh cluster-limit overlap-thresh))
+		(work-find-bright-spots lx delt brightness-diff-thresh cluster-limit overlap-thresh))
 	  (xlogntft "ds: ~a star images tagged " *astronomy-images-found*))))
 
 	  ;; Exclusions these hits: /home/data6/webcams/pendroy/scancam/Aberdeen-Hill-I-90-MP-552_3/delete-darkness/marked-images/exclude/
