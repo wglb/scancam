@@ -128,8 +128,8 @@
 					   (bright-center (brightness img x y))
 					   (max-brightness-diff (max (abs (- bright-left bright-right)) (abs (- bright-up bright-down))))
 					   (max-brightness-diff-wide (max (- bright-leftw bright-rightw) (abs (- bright-upw bright-downw)))))
-				  (debugc 5 (xlogntf "fbsi: max-brightness-diff: ~a  ~a at ~a ~a"
-									 max-brightness-diff 
+				  (debugc 5 (xlogntf "fbsi: max-brightness-diff: ~a max-brightness-diff-wide   ~a at ~a ~a ~a"
+									 max-brightness-diff max-brightness-diff-wide
 									 (list (abs (- bright-left bright-right) ) (abs (- bright-up bright-down)) bright-center) x y))
 				  (when (> max-brightness-diff oldmax)
 					(debugc 5 (xlogntf "fbsi: max-brightness-diff ~a greater than oldmax ~a at ~a ~a" max-brightness-diff oldmax x y))
@@ -218,14 +218,7 @@
 	(xlogntf "ch: glob ~%~s" glob)
 	(xlogntf "ch: colors~%~s" colors)
 	(show-array colors "colors")
-	(show-array bright "brightness")
-	#+nil (let ((dims (array-dimensions colors))
-		  (*print-pretty* nil))
-	  (dotimes (i (first dims))
-		(dotimes (j (second dims))
-		  (format (the-log-file) "~15s" (aref colors i j)))
-		(format (the-log-file) "~%")))))
-
+	(show-array bright "brightness")))
 
 (defun draw-grid-limited (width height new-image &optional (col nil) (row nil))
   (let* ((xincr (floor (/ width 10)))
@@ -256,10 +249,10 @@
 		  (debugc 5 (xlogntf "fbs: poss from int ~%~a" poss))
 		  (copy-image img new-image 0 0 0 0 width height) ;; ?? Dupe?
 		  (copy-palette img new-image)
-		  #+nuil (draw-grid-maybe width height new-image)
-		  (draw-grid-limited width height new-image 4 0)
+		  (draw-grid-maybe width height new-image)
+		  #+nil (draw-grid-limited width height new-image 4 0)
 		  (let ((list-o-clusters (find-clusters (cadr poss) delt))
-				(white  (allocate-color 255 255 255 :image new-image) #+nil (find-color 0 255 0 :image new-image)))
+				(white (allocate-color 255 255 255 :image new-image) ))
 			(let ((sublist
 					(if (< (length list-o-clusters) cluster-limit)
 						list-o-clusters
@@ -290,7 +283,7 @@
 									   :directory new-directory :type "jpg")))
 				  (when (plusp (length reduced))
 					(ensure-directories-exist new-file-name)
-					(xlogntf "fbs: new file name is ~a" new-file-name)
+					(xlogntf "fbs: new file name is ~a" (merge-pathnames new-file-name))
 					(write-image-to-file new-file-name :image  new-image :if-exists :supersede)
 					(incf *astronomy-images-found*)))
 				(debugc 5 (let ((rereduced (remove-overlap-by-distance reduced overlap-thresh)))
