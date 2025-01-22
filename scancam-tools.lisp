@@ -38,6 +38,18 @@
 	(debugc 5 (xlogntf "wsl: writing to ~s" fn))
     (write lsp :stream fo)))
 
+(defun pull-web-page (url &optional (ofn nil))
+  (let* ((dexans (dex-get url))
+		 (lsp (parse-html (dexans-body dexans)))
+		 (fn (if ofn
+				 ofn
+				 (make-pathname :name (pathname-name (uri-path (uri url))) :type "lsp"))))
+	(with-open-file (fo fn
+						:direction :output
+						:if-exists :supersede
+						:if-does-not-exist :create)
+	  (write lsp :stream fo))))
+
 (defun empty? (s)
   "Is s nil or the empty string ?"
   (or (null s) (string-equal "" s)))
