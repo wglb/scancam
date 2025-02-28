@@ -992,9 +992,9 @@
 	  (list (first tokes) (rest tokes))
 	  (if (equal 10 (length tokes))
 		  (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes)))
-		  (if (equal 11 (length tokes)) 
+		  (if (>= (length tokes) 11) 
 			  (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes))  (rest (rest (rest tokes))))
-			  (break "unknown length of ~a for ~s" (length tokes) tokes)))))
+			  (error "unknown length of ~a for ~s" (length tokes) tokes)))))
 
 (defun pull-new-rwis-image (which)
   "Pull the new style rwis images; answer the directory"
