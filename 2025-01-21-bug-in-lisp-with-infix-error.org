@@ -1,0 +1,112 @@
+When the code
+
+(defun calc-histogram (rect img)
+  (break "rect: ~s" rect)
+  (dotimes (y (- (third rect) (first rect)))
+	(dotimes (x (- (fourth rect) - (second rect)))
+	  (let ((pix (get-pixel x y :image img)))
+		(xlogntf "ch: x ~s y ~s pix ~s" x y pix)))))
+
+
+gets to the second dotimes, the infix somehow reaches deep into the stack and gives
+
+The value
+  (DETECT-STARS-IN-FILE-BRIGHTNESS "Pendroy/star"
+                                   "301001-01-2025-01-07-17-45-4.jpg"
+                                   1)
+
+is not of type
+  NUMBER
+   [Condition of type TYPE-ERROR]
+
+Restarts:
+ 0: [RETRY] Retry SLIME REPL evaluation request.
+ 1: [*ABORT] Return to SLIME's top level.
+ 2: [ABORT] abort thread (#<THREAD tid=3632088 "repl-thread" RUNNING {1034680003}>)
+
+Backtrace:
+  0: (SB-KERNEL:TWO-ARG-- 72 (DETECT-STARS-IN-FILE-BRIGHTNESS "Pendroy/star" "301001-01-2025-01-07-17-45-4.jpg" 1))
+  1: (CALC-HISTOGRAM (512 0 640 72) #<CL-GD::IMAGE ptr 7A1F1C02DBD0 size 1280/720 (true color) {101EEBFAC3}>)
+      Locals:
+        IMG = #<CL-GD::IMAGE ptr 7A1F1C02DBD0 size 1280/720 (true color) {101EEBFAC3}>
+        RECT = (512 0 640 72)
+        Y#1 = 0
+        SB-C::Y#2 = 128
+  2: (DRAW-GRID-LIMITED 1280 720 #<CL-GD::IMAGE ptr 7A1F1C02DBD0 size 1280/720 (true color) {101EEBFAC3}> 4 0)
+      Locals:
+        COL = 4
+        GREEN = 16711680
+        HEIGHT = 720
+        NEW-IMAGE = #<CL-GD::IMAGE ptr 7A1F1C02DBD0 size 1280/720 (true color) {101EEBFAC3}>
+        RECT = (512 0 640 72)
+        ROW = 0
+        WIDTH = 1280
+        XINCR = 128
+        YINCR = 72
+  3: (FIND-BRIGHT-SPOTS "Pendroy/star/301001-01-2025-01-07-17-45-4.jpg" 8 81 100 149)
+      Locals:
+        BRIGHTNESS-DIFF-THRESH = 81
+        CLUSTER-LIMIT = 100
+        DELT = 8
+        #:FILE-NAME0 = "Pendroy/star/301001-01-2025-01-07-17-45-4.jpg"
+        FN = "Pendroy/star/301001-01-2025-01-07-17-45-4.jpg"
+        HEIGHT = 720
+        HEIGHT#1 = 720
+        #:HEIGHT6 = 720
+        IMG = #<CL-GD::IMAGE ptr 7A1F1C0343A0 size 1280/720 (true color) {10091D5D33}>
+        NEW-DIRECTORY = (:RELATIVE "Pendroy" "star" "marked-images")
+        NEW-IMAGE = #<CL-GD::IMAGE ptr 7A1F1C02DBD0 size 1280/720 (true color) {101EEBFAC3}>
+        OVERLAP-THRESH = 149
+        POSS = (("Pendroy/star/301001-01-2025-01-07-17-45-4.jpg" :WIDTH 1280 :HEIGHT 720 :ASTRONOMY-DELT ...) ((9 267 91) (9 268 93) (9 271 91) (9 274 87) (9 296 113) (9 297 112) ...))
+        WIDTH = 1280
+        WIDTH#1 = 1280
+        #:WIDTH5 = 1280
+  4: (DO-FIND-BRIGHT-SPOTS "Pendroy/star/301001-01-2025-01-07-17-45-4.jpg" 8 81 100 149)
+      Locals:
+        BRIGHTNESS-DIFF-THRESH = 81
+        CLUSTER-LIMIT = 100
+        DELT = 8
+        FILE-NAME = "Pendroy/star/301001-01-2025-01-07-17-45-4.jpg"
+        FN = "Pendroy/star//marked-images/301001-01-2025-01-07-17-45-4_8-81.lsp"
+        OVERLAP-THRESH = 149
+  5: (DETECT-STARS-IN-FILE-BRIGHTNESS "Pendroy/star" "301001-01-2025-01-07-17-45-4.jpg" 1)
+      Locals:
+        BRIGHTNESS-DIFF-THRESH = 81
+        BX = 0
+        CLUSTER-LIMIT = 100
+        COUNT = 1
+        DELT = 8
+        DIR = "Pendroy/star"
+        FN = "301001-01-2025-01-07-17-45-4.jpg"
+        HCOUNT = 0
+        OVERLAP-THRESH = 149
+        SB-C::Y = 1
+  6: (SB-INT:SIMPLE-EVAL-IN-LEXENV (DETECT-STARS-IN-FILE-BRIGHTNESS "Pendroy/star" "301001-01-2025-01-07-17-45-4.jpg" 1) #<NULL-LEXENV>)
+  7: (EVAL (DETECT-STARS-IN-FILE-BRIGHTNESS "Pendroy/star" "301001-01-2025-01-07-17-45-4.jpg" 1))
+  8: (SWANK::EVAL-REGION "(detect-stars-in-file-brightness \"Pendroy/star\" \"301001-01-2025-01-07-17-45-4.jpg\" 1) ..)
+  9: ((LAMBDA NIL :IN SWANK-REPL::REPL-EVAL))
+ 10: (SWANK-REPL::TRACK-PACKAGE #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1008C576DB}>)
+ 11: (SWANK::CALL-WITH-RETRY-RESTART "Retry SLIME REPL evaluation request." #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1008C576BB}>)
+ 12: (SWANK::CALL-WITH-BUFFER-SYNTAX NIL #<FUNCTION (LAMBDA NIL :IN SWANK-REPL::REPL-EVAL) {1008C5769B}>)
+ 13: (SWANK-REPL::REPL-EVAL "(detect-stars-in-file-brightness \"Pendroy/star\" \"301001-01-2025-01-07-17-45-4.jpg\" 1) ..)
+ 14: (SB-INT:SIMPLE-EVAL-IN-LEXENV (SWANK-REPL:LISTENER-EVAL "(detect-stars-in-file-brightness \"Pendroy/star\" \"301001-01-2025-01-07-17-45-4.jpg\" 1) ..)
+ 15: (EVAL (SWANK-REPL:LISTENER-EVAL "(detect-stars-in-file-brightness \"Pendroy/star\" \"301001-01-2025-01-07-17-45-4.jpg\" 1) ..)
+ 16: (SWANK:EVAL-FOR-EMACS (SWANK-REPL:LISTENER-EVAL "(detect-stars-in-file-brightness \"Pendroy/star\" \"301001-01-2025-01-07-17-45-4.jpg\" 1) ..)
+ 17: (SWANK::PROCESS-REQUESTS NIL)
+ 18: ((LAMBDA NIL :IN SWANK::HANDLE-REQUESTS))
+ 19: ((LAMBDA NIL :IN SWANK::HANDLE-REQUESTS))
+ 20: (SWANK/SBCL::CALL-WITH-BREAK-HOOK #<FUNCTION SWANK:SWANK-DEBUGGER-HOOK> #<FUNCTION (LAMBDA NIL :IN SWANK::HANDLE-REQUESTS) {100878002B}>)
+ 21: ((FLET SWANK/BACKEND:CALL-WITH-DEBUGGER-HOOK :IN "/home/wgl/quicklisp/dists/quicklisp/software/slime-v2.28/swank/sbcl.lisp") #<FUNCTION SWANK:SWANK-DEBUGGER-HOOK> #<FUNCTION (LAMBDA NIL :IN SWANK::HAN..
+ 22: (SWANK::CALL-WITH-BINDINGS ((*STANDARD-INPUT* . #<SWANK/GRAY::SLIME-INPUT-STREAM {10085E7FF3}>)) #<FUNCTION (LAMBDA NIL :IN SWANK::HANDLE-REQUESTS) {100878004B}>)
+ 23: (SWANK::HANDLE-REQUESTS #<SWANK::MULTITHREADED-CONNECTION {10076C5DC3}> NIL)
+ 24: ((FLET SB-UNIX::BODY :IN SB-THREAD::RUN))
+ 25: ((FLET "WITHOUT-INTERRUPTS-BODY-" :IN SB-THREAD::RUN))
+ 26: ((FLET SB-UNIX::BODY :IN SB-THREAD::RUN))
+ 27: ((FLET "WITHOUT-INTERRUPTS-BODY-" :IN SB-THREAD::RUN))
+ 28: (SB-THREAD::RUN)
+ 29: ("foreign function: call_into_lisp_")
+ 30: ("foreign function: funcall1")
+
+	
+
+
