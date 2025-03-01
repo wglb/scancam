@@ -788,7 +788,7 @@
   "File away contents of major directory and sub directories"
   (xlogntft "file-away-aux ~s" camera-directory)
   (cond ((probe-file camera-directory)
-		 (dolist (dx (list "delete-similar" "delete-duplicates" "delete-darkness" "marked-images" "bright" "radio" "delete-uninteresting-new" "delete-uninteresting"))
+		 (dolist (dx (list "delete-similar" "delete-duplicates" "delete-darkness" "marked-images" "bright"))
 		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list dx))))) 
 			   (xlogntf "~s" newpn)
 			   (if (not newpn)
@@ -902,6 +902,7 @@
 			   (debugc 5 (xlogntf "we have the tag ~s" fi))
 			   (let* ((rfi (rest fi))
 					  (found (list (getf rfi :src) (getf rfi :alt) (getf rfi :data-positionid))))
+				 (xlogntf "finhp: found a element ~s~%    ~s" found (uri-path (uri (first found))))
 				 (push found *collected-bits*))))
 		   (if (equal (car elem) :img)
 			   (break "we gotta img ~s" (rest elem)))
@@ -918,6 +919,7 @@
 
 (defun pull-rwis (base)
   (incf *cameras-polled*)
+  
   (handler-case
 	  (let* ((full (car base))
 			 (uri (cdr base)))
@@ -945,7 +947,22 @@
 	(error (q)
 	  (xlogntft "pull-rwis barf on base ~s~% error ~s cameras ~s" base q *cameras-polled*))))
 
+(defun calc-path-not-really (fn-tokesa)
+  "For the Montana RWIS cameras"
+  (let* ((dir (first fn-tokesa))
+		 (fn-tokes (second fn-tokesa))
+
+		 (typ (car (last fn-tokes)))
+		 (newofn (format nil "~{~a-~}" (butlast fn-tokes)))
+		 (pfn (make-pathname 
+			   :directory  `(:relative ,dir)
+			   :name newofn
+			   :type typ)))
+	(break "fn-tokes ~s pfn ~s newofn ~s" fn-tokes pfn newofn)
+	pfn))
+
 (defun calc-path (fn-tokesa)
+  "For the Montana RWIS cameras"
   (let* ((dir (first fn-tokesa))
 		 (fn-tokes (second fn-tokesa))
 		 (camera-id (first fn-tokes))
@@ -956,11 +973,11 @@
 		 (hour (parse-integer (sixth fn-tokes)))
 		 (minute (parse-integer(seventh fn-tokes)))
 		 (extra2 (tokenize1 (eighth fn-tokes) #\.))
-		 (typ (second extra2))
+		 (typ (car (last fn-tokes)))
 		 (aux (first extra2))
 		 (fmt (list
 			   (cons "~a-"     camera-id)
-			   (cons "~a-"      extra)
+			   (cons "~a-"     extra)
 			   (cons "~4,'0D-" year )
 			   (cons "~2,'0D-" month)
 			   (cons "~2,'0D-" day)
@@ -982,33 +999,63 @@
 				 :directory  `(:relative ,dir)
 				 :name fn	
 				 :type typ)))
+	  
 	  (format nil "~{~a-~}" (rest fn-tokes))
 	  pfn)))
 ;; (calc-path (calc-dir-from-tokens (tokenize1 "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg" #\-)))
 ;; Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg
 
 (defun calc-dir-from-tokens (tokes)
-  (if (equal 9 (length tokes))
-	  (list (first tokes) (rest tokes))
-	  (if (equal 10 (length tokes))
-		  (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes)))
-		  (if (>= (length tokes) 11) 
-			  (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes))  (rest (rest (rest tokes))))
-			  (error "unknown length of ~a for ~s" (length tokes) tokes)))))
+  "Specific to the way RWIS formats file names"
+  (cond ((eq 10 (length tokes))
+		 (list (first tokes) (rest tokes)))
+		((eq 11 (length tokes))
+		 (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes))))
+		((eq 12 (length tokes))
+		 (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes)) (rest  (rest (rest tokes)))))
+		((eq 13 (length tokes))
+		 (list (format nil "~a-~a-~a-~a" (first tokes) (second tokes) (third tokes) (fourth tokes)) (rest (rest (rest (rest tokes))))))
+		(t
+		 (error "unknown length of ~a for ~s" (length tokes) tokes)))
+  
+  #+nil(if (equal 9 (length tokes))
+		   (list (first tokes) (rest tokes))
+		   (if (equal 10 (length tokes))
+			   (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes)))
+			   (if (>= (length tokes) 11) 
+				   (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes))  (rest (rest (rest tokes))))
+				   (error "unknown length of ~a for ~s" (length tokes) tokes)))))
 
 (defun pull-new-rwis-image (which)
-  "Pull the new style rwis images; answer the directory"
+  "Pull the new style rwis images; answer the directory. rest of elements are descriptive of camera."
   (let* ((the-url (first which))
 		 (path  (uri-path (uri the-url)))
-		 (tokes (tokenize1 (file-namestring path) #\-))
+		 (tokes (tokens (file-namestring (uri-path (uri path)))
+						#'(lambda (c)
+							(and (char/= #\- c) (char/= #\. c)))
+						0)
+				#+nil (tokenize1 (file-namestring path) #\-))
 		 (dirx (calc-dir-from-tokens tokes))
 		 (pfn (calc-path dirx)))
+	
 	(get-config-rescan (first dirx) :average)
 	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
 	  (pull-rwis (cons pfn (uri the-url))))
 	(first dirx)))
 
 ;; (calc-dir-from-tokens (tokenize1 "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg" #\-))
+
+(defun restore-collected-bits ()
+  "Restore the parsed, distilled home page"
+  (with-open-file (fi "collected.bits.lsp" :direction :input)
+	(setf *collected-bits* (read fi))
+	(length *collected-bits*)))
+
+(defun save-collected-bits ()
+  "Save the parsed, distilled home page"
+  (with-open-file (fo "collected.bits.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
+	(let ((*print-pretty* t))
+	  (write *collected-bits* :stream fo))))
 
 (defun find-images-new-home-page (lsp)
   (images-by-camera)
@@ -1018,10 +1065,9 @@
 	(finhp lsp)
 	(setf *collected-bits* (ashuffle *collected-bits*))
 	(dolist (cb *collected-bits*)
-	  (pushnew (cons (pull-new-rwis-image cb) 1) *images-by-camera*))) ;; todo does not account for multiple cameras on given site
-  (with-open-file (fo "collected.bits.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
-	(let ((*print-pretty* t))
-	  (write *collected-bits* :stream fo))))
+	  (let ((image (pull-new-rwis-image cb)))
+		(pushnew (cons image 1) *images-by-camera*)))) ;; todo does not account for multiple cameras on given site
+  (save-collected-bits))
 
 (defun find-time-gaps-c (arg)
   (let ((argx 
