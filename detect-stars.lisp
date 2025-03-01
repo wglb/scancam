@@ -281,7 +281,7 @@
 				(let ((mx (rest lx)))
 				  #+nil (break "check lx ~s and mx ~s" lx  mx)
 				  (draw-rectangle (list (- (first mx) 7) (- (second mx) 7)  (+ (first mx) 7) (+ (second mx) 7) ) :color blue :image new-image)))
-			  (break "what is max calc? ~s" max-calc)
+			  (xlogntf "what is max calc? ~s" max-calc)
 			  (draw-rectangle (list (- (second max-calc) 17) (- (third max-calc) 17)  (+ (second max-calc) 17) (+ (third max-calc) 17) ) :color red :image new-image)
 			  (let ((sublist
 					  (if (< (length list-o-clusters) cluster-limit)
