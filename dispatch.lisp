@@ -64,7 +64,7 @@
 
 (defparameter *command-line-args* nil)
 
-(defun generate-usage-string (&optional (prefix "") (suffix ""))
+(defun my-generate-usage-string (&optional (prefix "") (suffix ""))
   (with-output-to-string (stream)
     (write-string prefix stream)
     (loop with max-flag-length =
@@ -87,7 +87,7 @@
   (xlogntft "directory ~s" *directory*)
   (xlogntft "Help ~s" *help*)
   (xlogntft "files ~s" *command-line-args*)
-  (xlogntft (generate-usage-string)))
+  (xlogntft (my-generate-usage-string)))
 
 ;; Process group
 (defparameter *dispatch*
@@ -155,7 +155,7 @@
 		   (debugc 5 (xlogntf "dis: dbg: Dispach, parsed args are ~s, options are ~s" newargs (show-opts)))
 		   (xlogntf "Operation is ~s" *process*)
 		   (cond (*help*
-				  (xlogntft "~a" (generate-usage-string))
+				  (xlogntft "~a" (my-generate-usage-string))
 				  (show-opts)
 				  (xlogntf "help"))
 				 
