@@ -576,14 +576,12 @@
 			(break "tpn: botch"))))
 	  (xlogntft "tpn: home page fetch failure")))
 
-(defun images-by-camera0 (images cfh reset)
+(defun images-by-camera0 (images cfh)
   (dolist (ix images)
 	(let ((ent (gethash (car ix) cfh (cons (car ix) (cdr ix))) ))
-	  (if reset
-		  (setf ent (cons (car ent) 0)))
 	  (setf (gethash (car ix) cfh) ent))))
 
-(defun images-by-camera (&key (reset nil))
+(defun images-by-camera ()
   (let* ((ibc "images-by-camera1.lsp")
 		 (images (if (and (probe-file ibc)
 						  (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
@@ -591,8 +589,8 @@
 					   (read fi))
 					 nil))
 		 (cfh (make-hash-table :test 'equal)))
-	(images-by-camera0 images cfh reset)
-	(images-by-camera0 *images-by-camera* cfh reset)
+	(images-by-camera0 images cfh)
+	(images-by-camera0 *images-by-camera* cfh)
 	(with-open-file (fo ibc :direction :output :if-exists :supersede :if-does-not-exist :create)
 	  (maphash #'(lambda (k v)
 				   (declare (ignorable k))
@@ -603,9 +601,9 @@
 (defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
   "Pull images from all cameras. If rwis is set, process those cameras"
   (declare (ignorable alternate-log-file-name))
-  (xlogntft "try-three ~s ~s" alternate-log-file-name run-rwis)
-  (setf *images-by-camera* nil)
-  (images-by-camera :reset nil)
+  (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
+  #+nil (setf *images-by-camera* nil) ;; TODO this seems wrong
+  (images-by-camera)
   (setf *all-config-files* nil)
   (restore-config-file-list)
   (let ((rv t))
@@ -617,7 +615,7 @@
 	  (log-version-number "t3:==================== scancam (try-three) ")
 	  (setf *images-pulled* 0)
 	  (setf *dark-images-moved* 0)
-	  (xlogf "Begin run")
+	  (xlogf "t3:Begin run")
 	  (cond ((lockme "scancam")
 			 (xalertf "t3: locked ok")
 			 (xalertf "t3: running ~a" (version-number-string "t3"))
@@ -647,8 +645,8 @@
 			 (setf rv nil)))
 	  
 	  (save-config-file-list))
-	(xlogf "scancam (try-three) done ~a" (version-number-string "try-three"))
-	(xlogntf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
+	(xlogf "t3: done ~a" (version-number-string "try-three"))
+	(xlogntf "t3: img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
 			 *images-pulled*
 			 *dark-images-moved*
 			 *duplicate-images-deleted*
@@ -660,7 +658,8 @@
 			 (version-number-string "img")) 
 	(images-by-camera)
 	(write-unfiled-count (map 'list 'first *images-by-camera*))
-	(xlogf "End of run")
+	(xlogntf "t3: ~{~s~%~}" *images-by-camera*)
+	(xlogf "t3:End of run")
 	rv))
 
 (defun try-three-alt (args)
