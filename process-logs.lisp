@@ -2,10 +2,30 @@
 
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
-(defun f-logdir (basename)
+(defun log-files (dir)
+  (let ((logfiles nil))
+	(mapc #'(lambda (f)
+			 (if (string= (pathname-type f) "log")
+				 (push f logfiles)))
+		 (directory (make-pathname :directory dir :name :wild :type :wild)))
+	(reverse logfiles)))
+
+(defun not-today (dir)
+  (let ((not-todays nil)
+		(today (dates-ymd :ymd)))
+	(mapc #'(lambda (fil)
+			  (when (not (search today (pathname-name fil) :test 'equal))
+				(let ((dest (make-pathname :directory (append (pathname-directory dir) (list "logs")) :name (pathname-name fil) :type (pathname-type fil))))
+				  #+nil (break "fil ~s ~%dest ~s" fil dest)
+				  (move-file-to-destination fil dest))))
+		  (log-files dir))
+	not-todays))
+
+#+nil(defun f-logdir (basename)
+  "unsure how this helps"
   (let* ((basep (uiop:ensure-directory-pathname basename))
 		 (basename-last (car (last (pathname-directory basep ))))
-		(log-dirs nil))
+		 (log-dirs nil))
 	
 	(xlogntf "basename is ~s basep is ~s" basename-last basep)
     (uiop:collect-sub*directories
@@ -25,12 +45,12 @@
 	
 	(reverse log-dirs)))
 
-(defun f-logs (basename)
+#+nil (defun f-logs (basename)
+  "Unsure how this helps"
   (dolist (lx (f-logdir basename))
 	(xlogntf "logs found~a" (directory lx))))
 
-
-(defun prefix-with-file-time (logname)
+#+nil (defun prefix-with-file-time (logname)
   "answer the mtime (formatted) of a file"
   (if (probe-file logname)
 	  (let ((seconds (sb-posix:stat-mtime (sb-posix:stat logname))))
@@ -40,7 +60,7 @@
 		  (format nil "~4,'0D-~2,'0d-~2,'0d-~2,'0d-~2,'0d-logname" y m d h min )))
 	  nil))
 
-(defun rename-with-dsfn (logname)
+#+nil (defun rename-with-dsfn (logname)
   (let ((nn (prefix-with-file-time logname)))
 	(if nn
 		(move-file-to-destination logname nn))))
