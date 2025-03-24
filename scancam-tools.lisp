@@ -15,7 +15,6 @@
 
 (defparameter *use-handlers* nil)
 (defparameter *epoch-unixepoc-offset* (- (get-universal-time) (sb-ext:get-time-of-day)))
-(defparameter *images-by-camera* nil)
 
 (defparameter *all-cams* nil)
 

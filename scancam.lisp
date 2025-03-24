@@ -141,7 +141,6 @@
 		  (format nil "~s" ans)
 		  ans))))
 
-
 (defun get-darkness-threshold (cl)
   (let ((ans (get-config-rescan cl :average)))
 	(if (consp ans)
@@ -150,6 +149,43 @@
 			ans
 			0))))
 
+
+;;;; Camera tracking ------------------------------------------------------------------------------------------
+
+(defparameter *images-by-camera-hash* nil)
+
+(defparameter *images-by-camera* nil)
+
+(defparameter *images-by-camera-changed* nil)
+
+(defun images-by-camera-new ()
+  (let* ((ibc "images-by-camera2.lsp")
+		 (images (if (and (probe-file ibc)
+						  (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
+					 (with-open-file (fi ibc :direction :input)
+		 			   (read fi))
+					 nil)))
+
+	(setf *images-by-camera* nil)
+	(if (null *images-by-camera-hash*)
+		(setf *images-by-camera-hash* (make-hash-table :test 'equal)))
+	(mapc #'(lambda (c2)
+			  (cond (*images-by-camera-changed*))
+			  (setf (gethash (car c2) *images-by-camera-hash*  0) (cdr c2)))
+		  images)
+	(with-open-file (fo ibc :direction :output :if-exists :supersede :if-does-not-exist :create)
+	  (maphash #'(lambda (k v)
+				   (declare (ignorable k))
+				   (push (cons k v) *images-by-camera*))
+			   *images-by-camera-hash*)
+	  (write *images-by-camera* :stream fo))
+	*images-by-camera*))
+
+(defun images-camera-count (camera count)
+  (when (not *images-by-camera-hash*)
+	(images-by-camera-new))
+  (setf *images-by-camera-changed* t) ;; hash table later than file
+  (incf (gethash camera *images-by-camera-hash* 0) count))
 
 ;;;; ------------------------------------------------------------------------------------------
 
@@ -274,8 +310,9 @@
 		(time
 		 (mapc #'(lambda (cam)
 				   (move-dark-files-directory (concatenate 'string (car cam) "/" adate)))
-			   (images-by-camera)))))
-	(xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str)))
+			   (images-by-camera-new)))))
+	(xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str))
+  (xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str))
 
 (defun dark-files-archive (&optional (basedir nil))
   (if (null basedir)
@@ -347,9 +384,7 @@
 			  nil))))
 
 (defun all-image-directories ()
-  (if (null *images-by-camera*)
-	  (images-by-camera))
-  (unique-camera-directories *images-by-camera*))
+  (unique-camera-directories (images-by-camera-new)))
 
 (defun try-one-arizona ()
   (incf *cameras-polled*)
@@ -373,6 +408,7 @@
 			  (write-image-file long-fn ans)))
 		(error (c)
 		  (xlogntf "toa: botch in arizona camera fetch ~s" c)))
+	  (images-camera-count "arizona" image-count)
 	  (xlogntf "toa: done with arizona"))
 	summary))
 
@@ -485,29 +521,33 @@
   "all cams is a list of a cons of camera directory name and image count"
   (let ((*trace-output* (the-log-file)))
 	(time 
-	 (with-open-log-file ("deleting-duplicates")
+	 (with-open-log-file ("deleting-duplicates-overall")
 	   (let ((*trace-output* (the-log-file)))
 		 (log-version-number "del dupes")
 		 (dolist (fx (unique-camera-directories all-cams))
-		   (with-open-log-file ("deleting-duplicates" :dir `(:relative ,fx))
-			 (let ((*trace-output* (the-log-file)))
-			   (time
-				(let ((ans (remove-duplicates-by-hash (format nil "~a/" fx))))
-				  (incf *duplicate-images-deleted* ans)
-				  (xlogntf "dwdtdd: ~a duplicates deleted from ~s" ans fx ))))))
+		   (if fx
+			   (with-open-log-file ("deleting-duplicates" :dir `(:relative ,fx))
+				 (let ((*trace-output* (the-log-file)))
+				   (time
+					(let ((ans (remove-duplicates-by-hash (format nil "~a/" fx))))
+					  (incf *duplicate-images-deleted* ans)
+					  (xlogntf "dwdtdd: ~a duplicates deleted from ~s" ans fx )))))
+			   (xlogntft "dwtdd: camera shows nil ~s" all-cams)))
 		 (xlogntf "dwdtdd: ~a duplicates deleted" *duplicate-images-deleted*)))))
   (xlogntf "dwdtdd: ~a duplicates deleted" *duplicate-images-deleted*))
 
-(defun write-unfiled-count (all-cams)
+(defun write-unfiled-count ()
   (with-open-file (fo "unfiled-directory-count.txt" 
 					  :direction :output
 					  :if-exists :supersede
 					  :if-does-not-exist :create)
 	(let ((the-list nil))
-	  (dolist (jx all-cams)
-		(let ((list-o-files (make-list-files (directory  (concatenate 'string (file-namestring jx)   "/*.jpg")) nil)))
-		  (debugc 5 (xlogntf "wuc: count for ~s is ~s" jx (length list-o-files)))
-		  (push (format nil "~a ~a" (length list-o-files) jx) the-list)))
+	  (dolist (jx (images-by-camera-new))
+		(if jx
+			(let ((list-o-files (make-list-files (directory  (concatenate 'string (file-namestring (first jx))   "/*.jpg")) nil)))
+			  (debugc 5 (xlogntf "wuc: count for ~s is ~s" jx (length list-o-files)))
+			  (push (format nil "~a ~a" (length list-o-files) (car jx)) the-list))
+			(xlogntf "wuc: list has nill element")))
 	  (dolist (ix (sort the-list #'(lambda (str1 str2)
 									 (< (parse-integer str1 :junk-allowed t)
 										(parse-integer str2 :junk-allowed t)))))
@@ -530,11 +570,11 @@
 						  t)))
 	(xlogntf "our last run  was ~a and cur time is ~a elapsed is ~a" last-time-run hour-minute elapsed)
 	(debugc 5 (if last-time-run
-				  (xlogntf "t3: diff is ~a" elapsed)))
+				  (xlogntf "ttr: diff is ~a" elapsed)))
 	(cond (time-to-run
 		   (with-open-file (fo ".last-run" :direction :output :if-exists :supersede :if-does-not-exist :create)
 			 (write hour-minute :stream fo)))
-		  (t (xlogntf "t3: Not running RWIS this time, elapsed is ~a" elapsed)))
+		  (t (xlogntf "ttr: Not running RWIS this time, elapsed is ~a" elapsed)))
 	time-to-run))
 
 (defun do-kitt-peak-cams ()
@@ -576,34 +616,11 @@
 			(break "tpn: botch"))))
 	  (xlogntft "tpn: home page fetch failure")))
 
-(defun images-by-camera0 (images cfh)
-  (dolist (ix images)
-	(let ((ent (gethash (car ix) cfh (cons (car ix) (cdr ix))) ))
-	  (setf (gethash (car ix) cfh) ent))))
-
-(defun images-by-camera ()
-  (let* ((ibc "images-by-camera1.lsp")
-		 (images (if (and (probe-file ibc)
-						  (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
-					 (with-open-file (fi ibc :direction :input)
-					   (read fi))
-					 nil))
-		 (cfh (make-hash-table :test 'equal)))
-	(images-by-camera0 images cfh)
-	(images-by-camera0 *images-by-camera* cfh)
-	(with-open-file (fo ibc :direction :output :if-exists :supersede :if-does-not-exist :create)
-	  (maphash #'(lambda (k v)
-				   (declare (ignorable k))
-				   (push v *images-by-camera*))
-			   cfh)
-	  (write *images-by-camera* :stream fo))))
-
 (defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
   "Pull images from all cameras. If rwis is set, process those cameras"
   (declare (ignorable alternate-log-file-name))
   (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
-  #+nil (setf *images-by-camera* nil) ;; TODO this seems wrong
-  (images-by-camera)
+  (images-by-camera-new)
   (setf *all-config-files* nil)
   (restore-config-file-list)
   (let ((rv t))
@@ -656,9 +673,8 @@
 			 *astronomy-images-found*
 			 *uninteresting-files-deleted*
 			 (version-number-string "img")) 
-	(images-by-camera)
-	(write-unfiled-count (map 'list 'first *images-by-camera*))
-	(xlogntf "t3: ~{~s~%~}" *images-by-camera*)
+	(images-by-camera-new)
+	(write-unfiled-count)
 	(xlogf "t3:End of run")
 	rv))
 
@@ -1057,7 +1073,7 @@
 	  (write *collected-bits* :stream fo))))
 
 (defun find-images-new-home-page (lsp)
-  (images-by-camera)
+  (images-by-camera-new)
   (setf *collected-bits* nil) 
   (let ((*print-pretty* nil))
 	(log-version-number "finhp")
@@ -1065,7 +1081,7 @@
 	(setf *collected-bits* (ashuffle *collected-bits*))
 	(dolist (cb *collected-bits*)
 	  (let ((image (pull-new-rwis-image cb)))
-		(pushnew (cons image 1) *images-by-camera*)))) ;; todo does not account for multiple cameras on given site
+		(images-camera-count image 1)))) 
   (save-collected-bits))
 
 (defun find-time-gaps-c (arg)
