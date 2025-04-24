@@ -644,7 +644,7 @@
 			   (when (or (time-to-run) run-rwis)
 				 (get-wh-marina) ;; let's calibrate the interval 
 				 (try-pendroy-new)
-				 (do-we-need-to-delete-duplicates *images-by-camera*))
+				 #+nil (do-we-need-to-delete-duplicates *images-by-camera*))
 			   (unlockme "scancam"))
 			 (xalertf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
 					  *images-pulled*
@@ -660,6 +660,9 @@
 			(t 
 			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
 			 (setf rv nil)))
+	  (when (or (time-to-run) run-rwis)
+		(try-pendroy-new)
+		(do-we-need-to-delete-duplicates *images-by-camera*))
 	  
 	  (save-config-file-list))
 	(xlogf "t3: done ~a" (version-number-string "try-three"))
