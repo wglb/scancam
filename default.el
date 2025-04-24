@@ -16,10 +16,6 @@
 	  (revert-buffer))))
 
 
-;;(global-set-key [f5] 'fileaway)
-
-(global-set-key [f5] 'next-pic-no-mark)
-
 (defun poser ()
   (interactive)
   (dired-run-shell-command (format "%s poser/" (dired-shell-stuff-it "cp -v" (dired-get-marked-files) nil nil))))
@@ -115,6 +111,7 @@
 		 (dired-find-file))
 	  (message "End of jpg, dude"))))
   
+(global-set-key [f5] 'next-pic-no-mark)
 (global-set-key [S-f4] 'next-pic-no-mark)
 
 ;;(color-theme-zenburn)

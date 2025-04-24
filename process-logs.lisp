@@ -21,7 +21,7 @@
 		  (log-files dir))
 	not-todays))
 
-#+nil(defun f-logdir (basename)
+#+nil (defun f-logdir (basename)
   "unsure how this helps"
   (let* ((basep (uiop:ensure-directory-pathname basename))
 		 (basename-last (car (last (pathname-directory basep ))))
