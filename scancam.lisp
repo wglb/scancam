@@ -920,7 +920,7 @@
 			   (debugc 5 (xlogntf "we have the tag ~s" fi))
 			   (let* ((rfi (rest fi))
 					  (found (list (getf rfi :src) (getf rfi :alt) (getf rfi :data-positionid))))
-				 (xlogntf "finhp: found a element ~s~%    ~s" found (uri-path (uri (first found))))
+				 (debugc 5 (xlogntf "finhp: found a element ~s~%    ~s" found (uri-path (uri (first found)))))
 				 (push found *collected-bits*))))
 		   (if (equal (car elem) :img)
 			   (break "we gotta img ~s" (rest elem)))
