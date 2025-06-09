@@ -65,7 +65,7 @@
 (defun car-string (el)
   (uiop:native-namestring (car el)))
 
-(defparameter *deleting-not-moving* nil)
+(defparameter *deleting-not-moving* t)
 
 (defun exam-hashes-for-dupe ()
   (let ((delete-count 0))
@@ -133,10 +133,11 @@
 	  ans)))
 
 (defun remove-log-duplicates-by-hash (dir)
-  (setf *deleting-not-moving* t)
-  (setf *files-checked* 0)
-  (file-hashes (uiop:directory-files (uiop:native-namestring dir)))
-  (let ((ans (exam-hashes-for-dupe)))
-	(xlogntft "rldbh: ~a duplicates deleted from ~s" ans dir)
-	ans))
+  (let ((*deleting-not-moving* t))
+	(setf *files-checked* 0)
+	(file-hashes (uiop:directory-files (uiop:native-namestring dir)))
+	(let ((ans (exam-hashes-for-dupe)))
+	  (xlogntft "rldbh: ~a duplicates deleted from ~s" ans dir)
+	  ans)))
+
 

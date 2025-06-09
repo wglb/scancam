@@ -85,3 +85,27 @@
 					  (timestamp-day yest))))
 	ans))
 
+(defun mtime (fi)
+  (sb-posix:stat-mtime (sb-posix:stat fi)))
+
+
+(defun time-spread (dir)
+  (let* ((whose (directory (concatenate 'string dir "*.jpg")))
+		 (previous nil)
+		 (delta-hash (make-hash-table :test 'equal))
+		 (times nil))
+	(setq whose (sort whose #'(lambda (a b)
+								(string> (namestring a) (namestring b)))))
+	(dolist (fx whose)
+	  (push (mtime fx) times))
+	(setq previous (first times))
+	(setq times (sort times '> ))
+	(dolist (fx (rest times))
+	  (let* ((diff (- previous fx)))
+		(setf (gethash diff delta-hash ) (1+ (gethash diff delta-hash 0)) )
+		(xlogntf "prev ~a cur ~a dif ~a" previous fx  diff)
+		(setf previous fx)))
+	(maphash #'(lambda (k v)
+				 (xlogntf "delta ~a count ~a" k v))
+			 delta-hash)))
+

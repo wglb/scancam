@@ -219,6 +219,7 @@
 			  (let* ((pfn (format nil "~adarkness.txt" (dates-ymd :ym)))
 					 (fn (merge-pathnames dir pfn)) 
 					 (do-title (not (probe-file fn))))
+				(xlogntf "cfdd: darkness.txt file is at ~s" fn)
 				(with-open-file (fo fn :direction :output :if-exists :append :if-does-not-exist :create)
 				  (if do-title
 					  ;; Vid-000629001-00-03-2021-06-06-13-22.jpg  :      121.523,      45.931,     123.231,     121.659,     119.542,      48.743,      48.744,      63.264,  921600.000,111995860.000,
@@ -806,7 +807,7 @@
   "File away contents of major directory and sub directories"
   (xlogntft "file-away-aux ~s" camera-directory)
   (cond ((probe-file camera-directory)
-		 (dolist (dx (list "delete-similar" "delete-duplicates" "delete-darkness" "marked-images" "bright"))
+		 (dolist (dx (list "delete-similar" #+nil "delete-duplicates" "delete-darkness" "marked-images" "bright"))
 		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list dx))))) 
 			   (xlogntf "~s" newpn)
 			   (if (not newpn)

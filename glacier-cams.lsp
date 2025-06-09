@@ -4,7 +4,7 @@
 #+nil ("st-marys-skycam" . "https://www.nps.gov/webcams-glac/stmaryallsky-resize.jpg?1634834241753")
  ("many-glacier" . "https://www.nps.gov/webcams-glac/ManyGlacier.jpg?1634833403209" #+nil "http://www.nps.gov/webcams-glac/mgcam.jpg?201574222821")
  ("many-glacier-2" . "https://www.nps.gov/webcams-glac/ManyGlacierPTZ.jpg?1634833618118")
-#+nil ("apgar" . "https://www.nps.gov/webcams-glac/ApgarVillage.jpg?1634831880874")
+("apgar" .  "https://www.nps.gov/webcams-glac/ApgarVillage.jpg?1748906190867")
 #+nil  ("apgar" . "https://www.nps.gov/webcams-glac/apvccam.jpg")
 #+nil  ("apgar-2" . "https://www.nps.gov/webcams-glac/ApgarVillage2a.jpg")
  ("apgar-lookout-se" . "https://www.nps.gov/webcams-glac/middleforkcam.jpg?2019328121734&201932812184")

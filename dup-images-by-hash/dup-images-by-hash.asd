@@ -10,7 +10,7 @@
 			   #:replace-all
 			   #:move-files
                #:xlog)
-  :version "1.1.3"  
+  :version "1.1.4"  
   :components ((:file "dup-images-by-hash-package")
                (:file "dup-images-by-hash")
 			   (:file "dup-images-by-hash-cl")))
