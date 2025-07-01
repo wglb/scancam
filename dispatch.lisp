@@ -175,12 +175,19 @@
   (dispatch sb-ext:*posix-argv*)
   (sb-ext:exit))
 
-(defun save-core ()
+(defun save-core-compressed ()
   (format t "version being built is ~a with xlog version ~a~%" (slot-value (asdf:find-system 'scancam) 'asdf:version) (xlog-version))
   (sb-ext:save-lisp-and-die "scancam" 
                             :toplevel #'dispatch-top
 							:save-runtime-options t
 							:compression 22
+                            :executable t))
+
+(defun save-core ()
+  (format t "version being built is ~a with xlog version ~a~%" (slot-value (asdf:find-system 'scancam) 'asdf:version) (xlog-version))
+  (sb-ext:save-lisp-and-die "scancam" 
+                            :toplevel #'dispatch-top
+							:save-runtime-options t
                             :executable t))
 
 ;; test: (dispatch (list "sbcl" "--start=202020" "--debug=9"  "end-of-day" "help" "radio" "rescan" "delete-similar-files" "end-of-day-cleanup" ))
