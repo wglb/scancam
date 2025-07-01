@@ -715,6 +715,24 @@
 		cams)
   nil)
 
+(defun reset-camera-counts (n)
+  "reset the camera counts"
+  (declare (ignorable n))
+  (with-open-log-file ("reset-camera-counts" :show-log-file-name nil)
+	(log-version-number "rcc")
+	(restore-images-by-camera)
+	(xlogntf "rcc: images ~s" *images-by-camera*)
+	(let ((keys nil))
+	  (maphash #'(lambda (k v)
+				   (declare (ignorable v))
+				   (push k keys))
+			   *images-by-camera-hash*)
+	  (mapc #'(lambda (k)
+				(setf (gethash k *images-by-camera-hash*) 0))
+			keys))
+	(save-images-by-camera)
+	(xlogntf "rcc: images reset ~s" *images-by-camera*)))
+
 (defun end-of-day-cleanup (args)
   "Clean up similar images, duplicate images, and file away many things."
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t)
