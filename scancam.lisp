@@ -1,4 +1,4 @@
-;;;; scancam.lisp
+ ;;;; scancam.lisp
 
 (in-package #:scancam)
 
@@ -147,7 +147,6 @@
 			ans
 			0))))
 
-
 ;;;; Camera tracking ------------------------------------------------------------------------------------------
 
 (defparameter *images-by-camera-hash* nil)
@@ -159,47 +158,28 @@
 (defun restore-images-by-camera ()
   "Clear the hash, restore image counts by camera from file, answer list"
   (let* ((ibc "images-by-camera2.lsp")
-		(images (if (and (probe-file ibc)
-						 (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
-					(with-open-file (fi ibc :direction :input)
-		 			  (read fi))
-					nil)))
-	(setf *images-by-camera-hash* (make-hash-table :test 'equal))
-	(mapc #'(lambda (c2)
-			  #+nil (cond (*images-by-camera-changed*)) ;; what is this
-			  (setf (gethash (car c2) *images-by-camera-hash*  0) (cdr c2)))
-		  images)
-	(setf *images-by-camera* images)))
-
-(defun save-images-by-camera ()
-  (with-open-file (fo "images-by-camera2.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
-	  (maphash #'(lambda (k v)
-				   (push (cons k v) *images-by-camera*))
-			   *images-by-camera-hash*)
-	  (write *images-by-camera* :stream fo)))
-
-#+nil (defun images-by-camera-new ()
-  (let* ((ibc "images-by-camera2.lsp")
 		 (images (if (and (probe-file ibc)
 						  (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
 					 (with-open-file (fi ibc :direction :input)
 		 			   (read fi))
 					 nil)))
-
+	(setf *images-by-camera-hash* (make-hash-table :test 'equal))
 	(setf *images-by-camera* nil)
-	(if (null *images-by-camera-hash*)
-		(setf *images-by-camera-hash* (make-hash-table :test 'equal)))
 	(mapc #'(lambda (c2)
-			  (cond (*images-by-camera-changed*))
-			  (setf (gethash (car c2) *images-by-camera-hash*  0) (cdr c2)))
+			  (incf (gethash (car c2) *images-by-camera-hash* 0) (cdr c2)))
 		  images)
-	(with-open-file (fo ibc :direction :output :if-exists :supersede :if-does-not-exist :create)
-	  (maphash #'(lambda (k v)
-				   (declare (ignorable k))
-				   (push (cons k v) *images-by-camera*))
-			   *images-by-camera-hash*)
-	  (write *images-by-camera* :stream fo))
+	(maphash #'(lambda (k v)
+				 (push (cons k v) *images-by-camera*))
+			 *images-by-camera-hash*)
 	*images-by-camera*))
+
+(defun save-images-by-camera ()
+  (with-open-file (fo "images-by-camera2.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
+	(setf *images-by-camera* nil)
+	(maphash #'(lambda (k v)
+				 (push (cons k v) *images-by-camera*))
+			 *images-by-camera-hash*)
+	(write *images-by-camera* :stream fo)))
 
 (defun bump-images-camera-count (camera count)
   (when (not *images-by-camera-hash*)
@@ -404,9 +384,6 @@
 			(error "lcad: No camera file for ~s: " which)
 			  nil))))
 
-#+nil (defun all-image-directories ()
-  (unique-camera-directories (images-by-camera-new)))
-
 (defun try-one-arizona ()
   (incf *cameras-polled*)
   (let* ((summary nil)
@@ -425,7 +402,7 @@
 									(file-format-time (pathname-name (third cam)))
 									:type "jpg" :defaults (pathname-as-directory (car cam)))))
 			  (incf image-count)
-			  (push (cons (car cam) image-count) *images-by-camera*)
+			  (bump-images-camera-count (car cam) image-count)
 			  (write-image-file long-fn ans)))
 		(error (c)
 		  (xlogntf "toa: botch in arizona camera fetch ~s" c)))
@@ -488,7 +465,7 @@
 									fo)))))
 		
 		(xlogf "g1: ---- get-one-glacier-park ~a" (car pair))
-		(push (cons (car pair) image-count) *images-by-camera*)
+		(bump-images-camera-count (car pair) image-count)
 		(if rv
 			(cons rv image-count)
 			image-count))
@@ -507,7 +484,7 @@
 					  (gethash "content-type" headers "no-ct"))))
 		(cond ((string= "image/jpeg" ctyp)
 			   (write-image-file fn (dexans-body ans))
-			   (pushnew (cons "wh-marina" 1) *images-by-camera*))
+			   (bump-images-camera-count "wh-marina" 1))
 			  (t (xlogntf "gwm: Content type not image: ~s " ctyp)))))))
 
 (defun get-all-glacier ()
@@ -641,8 +618,6 @@
   "Pull images from all cameras. If rwis is set, process those cameras"
   #+nil (declare (ignorable alternate-log-file-name))
   (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
-  (setf *images-by-camera-hash* nil)
-  (restore-images-by-camera)
   (setf *all-config-files* nil)
   (restore-config-file-list)
   (let ((rv t))
@@ -659,14 +634,17 @@
 			 (xalertf "t3: locked ok")
 			 (xalertf "t3: running ~a" (version-number-string "t3"))
 			 (let* ((*print-pretty* nil))
+			   (cond ((or (time-to-run) run-rwis)
+					  (setf *images-by-camera-hash* nil) ;; clear if we are running everything
+					  (get-wh-marina) ;; let's calibrate the interval 
+					  (try-pendroy-new))
+
+					 (t ;; we are only running non-rwis
+					  (restore-images-by-camera)))
 			   (do-kitt-peak-cams)
 			   (do-vermont-cams)
 			   (get-all-glacier)
 			   (try-one-arizona)
-			   (when (or (time-to-run) run-rwis)
-				 (get-wh-marina) ;; let's calibrate the interval 
-				 (try-pendroy-new)
-				 #+nil (do-we-need-to-delete-duplicates *images-by-camera*))
 			   (unlockme "scancam"))
 			 (xalertf "img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
 					  *images-pulled*
@@ -677,7 +655,8 @@
 					  *errors-encountered*
 					  *astronomy-images-found*
 					  *uninteresting-files-deleted*
-					  (version-number-string "img")))
+					  (version-number-string "img"))
+			 (save-images-by-camera))
 			
 			(t 
 			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
@@ -860,7 +839,7 @@
 (defun file-away-override-new (args)
   (file-away-list args))
 
-(defun file-away-mass (&optional (directories (restore-images-by-camera))  #+nil (directories (map 'list 'first *images-by-camera*))) #+nil (map 'list 'first *images-by-camera*)
+(defun file-away-mass (&optional (directories (restore-images-by-camera)))
   "File away all *.jpg *.lsp (date-stamped) in each of the directories in the list 'directories'"
   (with-open-log-file ("file-away-mass" :show-log-file-name t)
 	(log-version-number "file-away-mass:")
