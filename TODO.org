@@ -4,4 +4,5 @@ TODO stuff
 * For Bull Mountain, Raynolds-Pass, Beaver-Hill, East-Livingston, Hunbry-Horse, Geyser,
 * Bull Mountain is done.
 * Avon darkness level largely adjusted
+* images-by-camera logic needs rewrite/redesign
 

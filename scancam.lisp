@@ -619,8 +619,9 @@
 
 (defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
   "Pull images from all cameras. If rwis is set, process those cameras"
-  (declare (ignorable alternate-log-file-name))
+  #+nil (declare (ignorable alternate-log-file-name))
   (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
+  (setf *images-by-camera-hash* nil)
   (images-by-camera-new)
   (setf *all-config-files* nil)
   (restore-config-file-list)
@@ -834,7 +835,7 @@
 (defun file-away-override-new (args)
   (file-away-list args))
 
-(defun file-away-mass (&optional (directories (map 'list 'first *images-by-camera*))) ;;(map 'list 'first *images-by-camera*)
+(defun file-away-mass (&optional (directories (images-by-camera-new))  #+nil (directories (map 'list 'first *images-by-camera*))) #+nil (map 'list 'first *images-by-camera*)
   "File away all *.jpg *.lsp (date-stamped) in each of the directories in the list 'directories'"
   (with-open-log-file ("file-away-mass" :show-log-file-name t)
 	(log-version-number "file-away-mass:")
