@@ -40,9 +40,7 @@
         ((consp doc)
          (if (equal (first doc) tag)
              (pushnew doc accum))
-         (find-tags tag (car doc) (find-tags tag (cdr doc) accum)))
-
-        (t (xlogf "ft: wat ~A" doc))))
+         (find-tags tag (car doc) (find-tags tag (cdr doc) accum)))))
 
 (defparameter *saved-home-page* nil)
 
@@ -156,9 +154,31 @@
 
 (defparameter *images-by-camera* nil)
 
-(defparameter *images-by-camera-changed* nil)
+#+nil (defparameter *images-by-camera-changed* nil)
 
-(defun images-by-camera-new ()
+(defun restore-images-by-camera ()
+  "Clear the hash, restore image counts by camera from file, answer list"
+  (let* ((ibc "images-by-camera2.lsp")
+		(images (if (and (probe-file ibc)
+						 (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
+					(with-open-file (fi ibc :direction :input)
+		 			  (read fi))
+					nil)))
+	(setf *images-by-camera-hash* (make-hash-table :test 'equal))
+	(mapc #'(lambda (c2)
+			  #+nil (cond (*images-by-camera-changed*)) ;; what is this
+			  (setf (gethash (car c2) *images-by-camera-hash*  0) (cdr c2)))
+		  images)
+	(setf *images-by-camera* images)))
+
+(defun save-images-by-camera ()
+  (with-open-file (fo "images-by-camera2.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
+	  (maphash #'(lambda (k v)
+				   (push (cons k v) *images-by-camera*))
+			   *images-by-camera-hash*)
+	  (write *images-by-camera* :stream fo)))
+
+#+nil (defun images-by-camera-new ()
   (let* ((ibc "images-by-camera2.lsp")
 		 (images (if (and (probe-file ibc)
 						  (plusp (sb-posix:stat-size (sb-posix:stat ibc))))
@@ -181,10 +201,10 @@
 	  (write *images-by-camera* :stream fo))
 	*images-by-camera*))
 
-(defun images-camera-count (camera count)
+(defun bump-images-camera-count (camera count)
   (when (not *images-by-camera-hash*)
-	(images-by-camera-new))
-  (setf *images-by-camera-changed* t) ;; hash table later than file
+	(restore-images-by-camera))
+  #+nil (setf *images-by-camera-changed* t) ;; hash table later than file
   (incf (gethash camera *images-by-camera-hash* 0) count))
 
 ;;;; ------------------------------------------------------------------------------------------
@@ -311,7 +331,7 @@
 		(time
 		 (mapc #'(lambda (cam)
 				   (move-dark-files-directory (concatenate 'string (car cam) "/" adate)))
-			   (images-by-camera-new)))))
+			   (restore-images-by-camera)))))
 	(xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str))
   (xlogntft "~s files moved for pattern ~s" *dark-images-moved* date-str))
 
@@ -384,7 +404,7 @@
 			(error "lcad: No camera file for ~s: " which)
 			  nil))))
 
-(defun all-image-directories ()
+#+nil (defun all-image-directories ()
   (unique-camera-directories (images-by-camera-new)))
 
 (defun try-one-arizona ()
@@ -409,7 +429,7 @@
 			  (write-image-file long-fn ans)))
 		(error (c)
 		  (xlogntf "toa: botch in arizona camera fetch ~s" c)))
-	  (images-camera-count "arizona" image-count)
+	  (bump-images-camera-count "arizona" image-count)
 	  (xlogntf "toa: done with arizona"))
 	summary))
 
@@ -537,13 +557,13 @@
 		 (xlogntf "dwdtdd: ~a duplicates deleted" *duplicate-images-deleted*)))))
   (xlogntf "dwdtdd: ~a duplicates deleted" *duplicate-images-deleted*))
 
-(defun write-unfiled-count ()
+(defun write-unfiled-count (images)
   (with-open-file (fo "unfiled-directory-count.txt" 
 					  :direction :output
 					  :if-exists :supersede
 					  :if-does-not-exist :create)
 	(let ((the-list nil))
-	  (dolist (jx (images-by-camera-new))
+	  (dolist (jx images)
 		(if jx
 			(let ((list-o-files (make-list-files (directory  (concatenate 'string (file-namestring (first jx))   "/*.jpg")) nil)))
 			  (debugc 5 (xlogntf "wuc: count for ~s is ~s" jx (length list-o-files)))
@@ -595,7 +615,7 @@
   (with-open-log-file ("vermont-cams-test")
 	(do-vermont-cams)))
 
-(defun try-pendroy-new-raw ()
+#+nil (defun try-pendroy-new-raw ()
   (cond ((get-rwis-home-page "current-new") 
 		 (find-images-new-home-page *saved-home-page*)
 		 (with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
@@ -608,7 +628,7 @@
 	  (handler-case
 		  (progn
 			(find-images-new-home-page *saved-home-page*)
-			(with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
+			#+nil (with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
 								 :direction :output :if-exists :supersede :if-does-not-exist :create)
 			  (write (all-image-directories) :stream fod)))
 		(error (e)
@@ -622,7 +642,7 @@
   #+nil (declare (ignorable alternate-log-file-name))
   (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
   (setf *images-by-camera-hash* nil)
-  (images-by-camera-new)
+  (restore-images-by-camera)
   (setf *all-config-files* nil)
   (restore-config-file-list)
   (let ((rv t))
@@ -663,7 +683,6 @@
 			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
 			 (setf rv nil)))
 	  (when (or (time-to-run) run-rwis)
-		(try-pendroy-new)
 		(do-we-need-to-delete-duplicates *images-by-camera*))
 	  
 	  (save-config-file-list))
@@ -678,8 +697,8 @@
 			 *astronomy-images-found*
 			 *uninteresting-files-deleted*
 			 (version-number-string "img")) 
-	(images-by-camera-new)
-	(write-unfiled-count)
+	(save-images-by-camera)
+	(write-unfiled-count *images-by-camera*)
 	(xlogf "t3:End of run")
 	rv))
 
@@ -705,11 +724,19 @@
   "Remove dups and similars for all cameras"
   (xlogntf "cac: there are ~a cameras to process" (length cams))
   (mapc #'(lambda (camera-directory)
-			(cleanup-one-camera camera-directory))
+			(cleanup-one-camera (car camera-directory)))
 		cams)
-  (file-away-auxiliary-mass))
+  (file-away-auxiliary-mass cams))
 
-(defun  end-of-day-cleanup (args)
+(defun test-cleanup-all-cameras (cams)
+  "Remove dups and similars for all cameras"
+  (xlogntf "cac: there are ~a cameras to process" (length cams))
+  (mapc #'(lambda (camera-directory)
+			(xlogntf "cleaning ~s" (car camera-directory)))
+		cams)
+  nil)
+
+(defun end-of-day-cleanup (args)
   "Clean up similar images, duplicate images, and file away many things."
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t)
 	(restore-config-file-list)
@@ -717,7 +744,7 @@
 	(cond ((null args)
 		   (let ((*trace-output* (the-log-file)))
 			 (time
-			  (cleanup-all-cameras (all-image-directories))))) 
+			  (cleanup-all-cameras (restore-images-by-camera))))) 
 		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
 	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
   (xlogntf " eod: ~a errors encounterd" *errors-encountered*))
@@ -810,23 +837,21 @@
   (cond ((probe-file camera-directory)
 		 (dolist (dx (list "delete-similar" #+nil "delete-duplicates" "delete-darkness" "marked-images" "bright"))
 		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list dx))))) 
-			   (xlogntf "~s" newpn)
-			   (if (not newpn)
-				   (xlogntf "No path for ~s" dx)
-				   (file-away-directory newpn)))
+			 (xlogntf "~s" newpn)
+			 (file-away-directory newpn))
 		   (file-away-directory (make-pathname :directory (list :relative camera-directory))))
 		 t)
 
 		(t (xlogntf "No base directory ~a" camera-directory)
 		   nil)))
 
-(defun file-away-auxiliary-mass (&optional ign)
-  (declare (ignorable ign))
+(defun file-away-auxiliary-mass (cams)
   (with-open-log-file ("file-aux")
-	(dolist (dx (all-image-directories))
-	  (with-open-log-file ("file-aux" :dir `(:relative ,dx) :show-log-file-name t)
-		(file-away-auxiliary dx) 
-		(remove-duplicates-by-hash dx)))))
+	(dolist (dx2 cams)
+	  (let ((dx (car dx2)))
+		(with-open-log-file ("file-aux" :dir `(:relative ,dx) :show-log-file-name t)
+		  (file-away-auxiliary dx) 
+		  (remove-duplicates-by-hash dx))))))
 
 (defun file-away-override (args)
   "file away the files in this list regardless of the parameter"
@@ -835,14 +860,13 @@
 (defun file-away-override-new (args)
   (file-away-list args))
 
-(defun file-away-mass (&optional (directories (images-by-camera-new))  #+nil (directories (map 'list 'first *images-by-camera*))) #+nil (map 'list 'first *images-by-camera*)
+(defun file-away-mass (&optional (directories (restore-images-by-camera))  #+nil (directories (map 'list 'first *images-by-camera*))) #+nil (map 'list 'first *images-by-camera*)
   "File away all *.jpg *.lsp (date-stamped) in each of the directories in the list 'directories'"
   (with-open-log-file ("file-away-mass" :show-log-file-name t)
 	(log-version-number "file-away-mass:")
 	(let ((dirs directories))
 	  (dolist (dx dirs)
 		(file-away-directory dx)))))
-
 
 (defvar *scancam*)
 
@@ -1078,7 +1102,6 @@
 	  (write *collected-bits* :stream fo))))
 
 (defun find-images-new-home-page (lsp)
-  (images-by-camera-new)
   (setf *collected-bits* nil) 
   (let ((*print-pretty* nil))
 	(log-version-number "finhp")
@@ -1086,7 +1109,7 @@
 	(setf *collected-bits* (ashuffle *collected-bits*))
 	(dolist (cb *collected-bits*)
 	  (let ((image (pull-new-rwis-image cb)))
-		(images-camera-count image 1)))) 
+		(bump-images-camera-count image 1)))) 
   (save-collected-bits))
 
 (defun find-time-gaps-c (arg)
