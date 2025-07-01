@@ -99,6 +99,7 @@
 		(cons :delete-dark-files 'move-prod-darkfiles)
 		(cons :delete-similar-files 'compare-directory-new) 
 		(cons :end-of-day 'end-of-day-cleanup)
+		(cons :reset-camera-counts 'reset-camera-counts)
 		(cons :end-of-day-test 'end-of-day-cleanup-test)
 		(cons :subtract-dir 'subtract-dir-new)
 		(cons :dark-files-archive 'dark-files-archive)
