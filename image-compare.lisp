@@ -8,12 +8,17 @@
 
 (defparameter *images-viewed* 0)
 
+(defparameter *similar-images-deleted* 0)
+(declaim (fixnum *similar-images-deleted*))
+
 (declaim (fixnum *images-viewed*))
 
 (defparameter *global-images-deleted* 0)
 (declaim (fixnum *global-images-deleted*))
 (defparameter *delete-these-files* nil)
 (defparameter *move-files-for-real* nil)
+(defparameter *global-images-viewed* 0)
+(declaim (fixnum *global-images-viewed*))
 
 (defun compare-images (image1 image2 &optional (sameness-threshold 10.0))
   "Determine if two images are similar"
@@ -96,7 +101,7 @@
 (defparameter *subtract-threshold* 0)
 (declaim (fixnum *subtract-threshold*))
 
-(defun subtract-images (image1 image2 )
+(defun subtract-images (image1 image2)
   (let ((height1 0)
 		(height2 0)
 		(width1 0)

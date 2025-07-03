@@ -6,6 +6,7 @@
  (:vermont-cams . "vermont-cams.lsp")
  (:glacier-cams . "glacier-cams.lsp")
  (:kitt-peak-cams . "kitt-peak-cams.lsp")
+ (:eod-processing . "lake")
  (:arizona . "arizona")
  (:all-cams   :glacier-cams :arizona-cams  :vermont-cams :kitt-peak-cams)
  (:cams-on-hold :rwis-cams)

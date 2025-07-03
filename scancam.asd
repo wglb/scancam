@@ -25,14 +25,17 @@
 			   #:local-time
 			   #:dex-get)
     
-  :version "2.19.4"
+  :version "2.20.1"
   :components ((:file "scancam-package")
+			   (:file "globals")
 			   (:file "scancam-tools")
-               (:file "dispatch")
-			   (:file "image-compare")
-			   (:file "scancam")
+               (:file "image-compare")
+			   (:file "end-of-day-processing")
 			   (:file "process-logs")
-			   (:file "detect-stars")))
+			   (:file "detect-stars")
+			   (:file "dispatch")
+			   (:file "rwis-cameras")
+			   (:file "scancam")))
 
 
 

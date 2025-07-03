@@ -4,8 +4,6 @@
 
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
-(defparameter *pendroy-base* "http://rwis.mdt.mt.gov/scanweb/Camera.asp?Pageid=Camera&Units=English&Groupid=301000&Siteid=301001&Senid=&Wxid=3011&Mapid=&DisplayClass=Java&SenType=All&HEndDate=&Zoneid=&Mode=&Sprayerid=&Dvid=&CD=9%2F12%2F2013+7%3A46%3A34+PM")
-
 (defparameter 
     *user-agent*
   ;;"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6.13; rv:10.0.2) Gecko/20100101 Firefox/10.0.2"
@@ -13,85 +11,9 @@
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36")
 
 ;; http://rwis.mdt.mt.gov/ScanWeb/Wx/images/Vid-000629001-00-00-2014-06-29-23-34.jpg sweetgrass north
-(defparameter *sweetgrass-base*
-  "http://rwis.mdt.mt.gov/scanweb/Camera.asp?Pageid=Camera&Units=English&Groupid=629000&Siteid=629001&Senid=&Wxid=62911&Mapid=&DisplayClass=Java&SenType=All&HEndDate=&Zoneid=&Mode=1&Sprayerid=&Dvid=&CD=6%2F29%2F2014+5%3A50%3A20+PM")
 
 (defun ashuffle (sequence)
   (alexandria:shuffle sequence))
-
-(defparameter *master-index-page* nil)
-
-(defparameter *parsed-homepage* nil)
-
-(defparameter *home-page-parts* nil)
-
-(defun sanitize-slashes (which)
-  (replace-all (replace-all (replace-all (replace-all which "/" "_") "." "-") "&" ",") "?" "q"))
-
-(defun find-tags (tag doc &optional (accum nil))
-  "crude attempt to find tags.
-   given a parsed document in S-expressions, accumulate a list of tags "
-  (cond ((null doc)
-         accum)
-        
-        ((atom doc)
-         accum)
-        
-        ((consp doc)
-         (if (equal (first doc) tag)
-             (pushnew doc accum))
-         (find-tags tag (car doc) (find-tags tag (cdr doc) accum)))))
-
-(defparameter *saved-home-page* nil)
-
-(defun the-tag (element)
-  "Return the tag as an atom, without attribute"
-  (if (consp element)
-	  (if (consp (first element))
-		  (first (first element))
-		  (first element))
-	  element))
-
-(defun the-tag-p (element want)
-  (eq (the-tag element) want))
-
-(defun the-attribute (element)
-  (if (consp element)
-	  (if (consp (first element))
-			(rest (first element))
-			nil)
-	  element))
-
-(defun analyze-menu-page (pg)
-  (dolist (fel pg)
-	(when (the-tag-p fel :html)
-	  (dolist (fmx fel)
-		(when (the-tag-p fmx :body)
-		  (dolist (fxxx fmx)
-			(declare (ignorable fxxx))
-			3))))))
-
-(defun find-cameras-link (pg)
-  (cond ((null pg)
-		 nil)
-		
-		((not (consp pg))
-		 nil)
-		
-		((the-tag-p pg :td)
-		 (let* ((link (find-tags :a pg))
-				(dest (getf link :href))
-				(which (second link)))
-		   (break "link ~s dest ~s which ~s" link dest which)
-		   which))
-		
-		
-		(t (find-cameras-link (rest pg)))))
-
-(defparameter *delete-or-not* t)
-(defparameter *delete-threshold* nil)
-(defparameter *delete-threshold-directory* nil)
-(defparameter *delete-threshold-default* 37)
 
 
 ;; ================================================================================- Config files
@@ -154,6 +76,25 @@
 (defparameter *images-by-camera* nil)
 
 #+nil (defparameter *images-by-camera-changed* nil)
+
+(defun reset-camera-counts (n)
+  "reset the camera counts"
+  (declare (ignorable n))
+  (with-open-log-file ("reset-camera-counts" :show-log-file-name nil)
+	(log-version-number "rcc")
+	(restore-images-by-camera)
+	(xlogntf "rcc: images ~s" *images-by-camera*)
+	(let ((keys nil))
+	  (maphash #'(lambda (k v)
+				   (declare (ignorable v))
+				   (push k keys))
+			   *images-by-camera-hash*)
+	  (mapc #'(lambda (k)
+				(setf (gethash k *images-by-camera-hash*) 0))
+			keys))
+	(save-images-by-camera)
+	(xlogntf "rcc: images reset ~s" *images-by-camera*)))
+
 
 (defun restore-images-by-camera ()
   "Clear the hash, restore image counts by camera from file, answer list"
@@ -230,7 +171,8 @@
 			
 			(cond ((or below-avg-thresh below-deltas-thresh)
 				   (push (xlogntf "cfdd: gonna move ~s to darkness" long-fn) rv)
-				   (detect-stars-in-file (directory-namestring long-fn) long-fn)
+				   (if (string= (get-config-rescan long-fn :eod-processing) (machine-instance))
+					   (detect-stars-in-file (directory-namestring long-fn) long-fn))
 				   (let ((err (move-file-to-delete long-fn "delete-darkness")))
 					 (cond ((zerop err)
 							(incf delete-count)
@@ -246,13 +188,6 @@
 		  (xlogntf "cfdd: Boom: ~a on cfdd for file ~s" ouch long-fn)
 		  nil))
 	  nil))
-
-(defun slashes-to-hyphens (str)
-  (let* ((ans (replace-all (uiop:native-namestring str) "/" "-"))
-		 (l-1 (1- (length ans))))
-	(if (char= #\- (char ans l-1))
-		(subseq ans 0 l-1)
-		ans)))
 
 (defun move-dark-files-directory (&optional (dir *default-pathname-defaults*))
   "Move to move-dark for each file that is 'dark'"
@@ -357,13 +292,6 @@
   (with-open-log-file ("test-all-frame" :dates nil :append-or-replace :supersede)
 	(log-version-number "test-all")
 	(try-three)))
-
-(defun file-format-time (&optional (suffix "")) 
-  (let ((suf (if (and suffix (not (string= "" suffix)))
-				 "_" "")))
-	(multiple-value-bind(s min h d m y)
-		(decode-universal-time (+ *epoch-unixepoc-offset* (sb-ext:get-time-of-day)) 0)
-      (format nil "~4,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D~a~a" y m d h min s suf suffix))))
 
 (defun list-cams (which)
   (mapcar #'(lambda (wh)
@@ -593,28 +521,6 @@
   (with-open-log-file ("vermont-cams-test")
 	(do-vermont-cams)))
 
-#+nil (defun try-pendroy-new-raw ()
-  (cond ((get-rwis-home-page "current-new") 
-		 (find-images-new-home-page *saved-home-page*)
-		 (with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
-							  :direction :output :if-exists :supersede :if-does-not-exist :create)
-		   (write (all-image-directories) :stream fod)))
-		(t (xlogntft "tpn: home page fetch failure"))))
-
-(defun try-pendroy-new ()
-  (if (get-rwis-home-page "current-new") 
-	  (handler-case
-		  (progn
-			(find-images-new-home-page *saved-home-page*)
-			#+nil (with-open-file (fod "live-directories.lsp"  ;; This is redundant with 'images-by-camera, but not as up to date
-								 :direction :output :if-exists :supersede :if-does-not-exist :create)
-			  (write (all-image-directories) :stream fod)))
-		(error (e)
-		  (progn
-			(xlogntft "tpn: error in new rwis home page processing ~s:" e)
-			(break "tpn: botch"))))
-	  (xlogntft "tpn: home page fetch failure")))
-
 (defun try-three (&optional (alternate-log-file-name nil) (run-rwis nil))
   "Pull images from all cameras. If rwis is set, process those cameras"
   #+nil (declare (ignorable alternate-log-file-name))
@@ -687,68 +593,6 @@
 		 (xlogntf "Unexpected extra args, processing halted: ~% ~s " args))
 		(t (xlogntf "Would be processing '~s'" args))))
 
-(defun end-of-day-cleanup-test (args)
-  (xlogntft "end-of-day-cleanup-test, args are ~s" args))
-
-(defun cleanup-one-camera (camera-directory)
-  "Remove duplicates and similar images. To be done before items filed away"
-  (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t :dir `(:relative ,camera-directory))
-	(let ((*trace-output* (the-log-file)))
-	  (time
-	   (progn
-		 (remove-duplicates-by-hash camera-directory)
-		 (dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
-		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; 
-			 (xlogntf "eodc: Going to ~s for deletion" newpn)
-			 (remove-duplicates-by-hash newpn)))
-		 (compare-directory camera-directory))))))
-
-(defun cleanup-all-cameras (cams)
-  "Remove dups and similars for all cameras"
-  (xlogntf "cac: there are ~a cameras to process" (length cams))
-  (mapc #'(lambda (camera-directory)
-			(cleanup-one-camera (car camera-directory)))
-		cams)
-  (file-away-auxiliary-mass cams))
-
-(defun test-cleanup-all-cameras (cams)
-  "Remove dups and similars for all cameras"
-  (xlogntf "cac: there are ~a cameras to process" (length cams))
-  (mapc #'(lambda (camera-directory)
-			(xlogntf "cleaning ~s" (car camera-directory)))
-		cams)
-  nil)
-
-(defun reset-camera-counts (n)
-  "reset the camera counts"
-  (declare (ignorable n))
-  (with-open-log-file ("reset-camera-counts" :show-log-file-name nil)
-	(log-version-number "rcc")
-	(restore-images-by-camera)
-	(xlogntf "rcc: images ~s" *images-by-camera*)
-	(let ((keys nil))
-	  (maphash #'(lambda (k v)
-				   (declare (ignorable v))
-				   (push k keys))
-			   *images-by-camera-hash*)
-	  (mapc #'(lambda (k)
-				(setf (gethash k *images-by-camera-hash*) 0))
-			keys))
-	(save-images-by-camera)
-	(xlogntf "rcc: images reset ~s" *images-by-camera*)))
-
-(defun end-of-day-cleanup (args)
-  "Clean up similar images, duplicate images, and file away many things."
-  (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t)
-	(restore-config-file-list)
-	(log-version-number "eod")
-	(cond ((null args)
-		   (let ((*trace-output* (the-log-file)))
-			 (time
-			  (cleanup-all-cameras (restore-images-by-camera))))) 
-		  (t (xlogntf " eod: unexpected args, ~s; processing halted" args)))
-	(xlogntf " eod: ~a errors encounterd" *errors-encountered*))
-  (xlogntf " eod: ~a errors encounterd" *errors-encountered*))
 
 (defun calc-date-structered-directory-name (fx)
   "This takes a simple file name with no directory component, returns relative directory or nil if file not date-stamped"
@@ -875,7 +719,6 @@
 
 (defvar *detect-stars*)
 (defvar *delete-similar-files*)
-(defvar *end-of-day-cleanup*)
 (defvar *subtract-dir*)
 (defvar *file-away*)
 (defvar *file-away-override*)
@@ -884,43 +727,6 @@
 #+nil (defvar *delete-dark-files*)
 
 (defparameter *camera-home-page* nil)
-
-(defun get-rwis-home-page (&optional (base "") (page "https://app.mdt.mt.gov/atms/public/cameras"))
-  ;; beginning of group "((:DIV :CLASS "modal camera-modal rwis-modal" :ID "modal2")"
-  ;; group header for camers is                   ((:DIV :CLASS "col-md-12 col-lg
-  ;; title of camera group                 ((:H4 :CLASS "modal-title") "Baker") 
-  ;; no other use of the h4 sequence above
-  ;; individual image :IMG :TABINDEX "1" :CLASS "img-fluid" :SRC
-  ;; reference image would be 
-  ;; ((:IMG :TABINDEX "1" :CLASS "img-fluid" :SRC
-  ;;                     "https://mdt.mt.gov/other/WebAppData/External/RRS/RWIS/Pendroy-301001-00-3-1-2024-15-15-1.jpg"
-  ;;                    :ALT "South Elev 4199 - 03/01/2024 03:15 PM"
-  ;;                     :DATA-POSITIONID "301010" :DATA-POLL-DATE
-  ;;                     "03/01/2024 03:15 PM"))
-  ;; four pendroy (should be four) under img: :class "img-fluid". others imply thumb and some with js.
-  ;; key images always have :tabindex element.
-  
-  (let* ((ans (dex-get page))
-		 (pbody (dexans-body ans))
-		 (*print-pretty* t))
-
-	(cond ((dexans-err ans)
-		   (xlogntft "bad html from home page, counting on saved")
-		   (restore-rwis-home-page base))
-
-		  (t (let ((ppbody (parse-html pbody)))
-			   (setf *saved-home-page* (write-sexp-lsp ppbody (format nil "rwis-cameras-new-~a.lsp" base)))
-			   (write-sexp-lsp ppbody (format nil "rwis-cameras-new-~a.lsp" (dates-ymd :ym))))))) 
-  
-  (length *saved-home-page*))
-
-(defun restore-rwis-home-page (&optional (base ""))
-  (with-open-file (fi (format nil "rwis-cameras-new-~a.lsp" base))
-	(setf *saved-home-page* (read fi)))
-  (length *saved-home-page*))
-
-
-(defparameter  *collected-bits* nil)
 
 (defun cons-form-p (form &optional (test #'keywordp))
   (and (consp form)
@@ -992,119 +798,7 @@
 	(error (q)
 	  (xlogntft "pull-rwis barf on base ~s~% error ~s cameras ~s" base q *cameras-polled*))))
 
-(defun calc-path (fn-tokesa)
-  "For the Montana RWIS cameras"
-  (let* ((dir (first fn-tokesa))
-		 (fn-tokes (second fn-tokesa))
-		 (camera-id (first fn-tokes))
-		 (extra (second fn-tokes))
-		 (year (parse-integer (fifth fn-tokes)))
-		 (month (parse-integer (third fn-tokes)))
-		 (day (parse-integer (fourth  fn-tokes)))
-		 (hour (parse-integer (sixth fn-tokes)))
-		 (minute (parse-integer(seventh fn-tokes)))
-		 (extra2 (tokenize1 (eighth fn-tokes) #\.))
-		 (typ (car (last fn-tokes)))
-		 (aux (first extra2))
-		 (fmt (list
-			   (cons "~a-"     camera-id)
-			   (cons "~a-"     extra)
-			   (cons "~4,'0D-" year )
-			   (cons "~2,'0D-" month)
-			   (cons "~2,'0D-" day)
-			   (cons "~2,'0D-" hour)
-			   (cons "~2,'0D-" minute)
-			   (cons "~2,'0D" aux)))
-		 (ofn (format nil "~4,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~a-~a"
-					  year month day
-					  hour minute aux
-					  camera-id
-					  extra))
-		 (form nil))
-	ofn
-	(dolist (fx fmt)
-	  (push (format nil (car fx) (cdr fx) ) form))
-	
-	(let* ((fn (format nil "~{~a~}" (nreverse form)))
-		   (pfn (make-pathname 
-				 :directory  `(:relative ,dir)
-				 :name fn	
-				 :type typ)))
-	  
-	  (format nil "~{~a-~}" (rest fn-tokes))
-	  pfn)))
-;; (calc-path (calc-dir-from-tokens (tokenize1 "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg" #\-)))
-;; Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg
 
-(defun calc-dir-from-tokens (tokes)
-  "Specific to the way RWIS formats file names"
-  (cond ((eq 10 (length tokes))
-		 (list (first tokes) (rest tokes)))
-		((eq 11 (length tokes))
-		 (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes))))
-		((eq 12 (length tokes))
-		 (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes)) (rest  (rest (rest tokes)))))
-		((eq 13 (length tokes))
-		 (list (format nil "~a-~a-~a-~a" (first tokes) (second tokes) (third tokes) (fourth tokes)) (rest (rest (rest (rest tokes))))))
-		(t
-		 (error "unknown length of ~a for ~s" (length tokes) tokes)))
-  
-  #+nil(if (equal 9 (length tokes))
-		   (list (first tokes) (rest tokes))
-		   (if (equal 10 (length tokes))
-			   (list (format nil "~a-~a" (first tokes) (second tokes))  (rest (rest tokes)))
-			   (if (>= (length tokes) 11) 
-				   (list (format nil "~a-~a-~a" (first tokes) (second tokes) (third tokes))  (rest (rest (rest tokes))))
-				   (error "unknown length of ~a for ~s" (length tokes) tokes)))))
-
-(defun pull-new-rwis-image (which)
-  "Pull the new style rwis images; answer the directory. rest of elements are descriptive of camera."
-  (let* ((the-url (first which))
-		 (path  (uri-path (uri the-url)))
-		 (tokes (tokens (file-namestring (uri-path (uri path)))
-						#'(lambda (c)
-							(and (char/= #\- c) (char/= #\. c)))
-						0)
-				#+nil (tokenize1 (file-namestring path) #\-))
-		 (dirx (calc-dir-from-tokens tokes))
-		 (pfn (calc-path dirx)))
-	
-	(get-config-rescan (first dirx) :average)
-	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
-	  (pull-rwis (cons pfn (uri the-url))))
-	;; dirx is of the form ("Pendroy" ("301001" "01" "7" "3" "2025" "8" "45" "11" "jpg"))
-	(first dirx)))
-
-;; (calc-dir-from-tokens (tokenize1 "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg" #\-))
-
-(defun restore-collected-bits ()
-  "Restore the parsed, distilled home page"
-  (with-open-file (fi "collected.bits.lsp" :direction :input)
-	(setf *collected-bits* (read fi))
-	(length *collected-bits*)))
-
-(defun save-collected-bits ()
-  "Save the parsed, distilled home page"
-  (with-open-file (fo "collected.bits.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
-	(let ((*print-pretty* t))
-	  (write *collected-bits* :stream fo))))
-
-(defun find-images-new-home-page (lsp)
-  (setf *collected-bits* nil) 
-  (let ((*print-pretty* nil)
-		(cams nil))
-	(log-version-number "finhp")
-	(finhp lsp)
-	(setf *collected-bits* (ashuffle *collected-bits*))
-	(with-open-file (fo (format nil "~a-rwis-cameras.out" (dates-ymd :ymd)  )  :direction :output :if-exists :supersede :if-does-not-exist :create)
-	  (dolist (cb *collected-bits*)
-		(let ((image (pull-new-rwis-image cb)))
-		  (bump-images-camera-count image 1)
-		  (pushnew image cams :test 'equal)))
-	  (mapc #'(lambda (i)
-				(write-line i  fo))
-			(sort cams 'string<)))) 
-  (save-collected-bits))
 
 (defun find-time-gaps-c (arg)
   (let ((argx 

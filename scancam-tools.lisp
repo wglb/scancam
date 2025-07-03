@@ -18,8 +18,6 @@
 
 (defparameter *all-cams* nil)
 
-
-
 (declaim (optimize (speed 0) (safety 3) (debug 3) (space 0)))
 
 (defun is-a-number (who) 
@@ -108,4 +106,72 @@
 	(maphash #'(lambda (k v)
 				 (xlogntf "delta ~a count ~a" k v))
 			 delta-hash)))
+
+
+(defun sanitize-slashes (which)
+  (replace-all (replace-all (replace-all (replace-all which "/" "_") "." "-") "&" ",") "?" "q"))
+
+(defun find-tags (tag doc &optional (accum nil))
+  "crude attempt to find tags.
+   given a parsed document in S-expressions, accumulate a list of tags "
+  (cond ((null doc)
+         accum)
+        
+        ((atom doc)
+         accum)
+        
+        ((consp doc)
+         (if (equal (first doc) tag)
+             (pushnew doc accum))
+         (find-tags tag (car doc) (find-tags tag (cdr doc) accum)))))
+
+(defun the-tag (element)
+  "Return the tag as an atom, without attribute"
+  (if (consp element)
+	  (if (consp (first element))
+		  (first (first element))
+		  (first element))
+	  element))
+
+(defun the-tag-p (element want)
+  (eq (the-tag element) want))
+
+(defun the-attribute (element)
+  (if (consp element)
+	  (if (consp (first element))
+			(rest (first element))
+			nil)
+	  element))
+
+(defun find-cameras-link (pg)
+  (cond ((null pg)
+		 nil)
+		
+		((not (consp pg))
+		 nil)
+		
+		((the-tag-p pg :td)
+		 (let* ((link (find-tags :a pg))
+				(dest (getf link :href))
+				(which (second link)))
+		   (break "link ~s dest ~s which ~s" link dest which)
+		   which))
+		
+		
+		(t (find-cameras-link (rest pg)))))
+
+
+(defun slashes-to-hyphens (str)
+  (let* ((ans (replace-all (uiop:native-namestring str) "/" "-"))
+		 (l-1 (1- (length ans))))
+	(if (char= #\- (char ans l-1))
+		(subseq ans 0 l-1)
+		ans)))
+
+(defun file-format-time (&optional (suffix "")) 
+  (let ((suf (if (and suffix (not (string= "" suffix)))
+				 "_" "")))
+	(multiple-value-bind(s min h d m y)
+		(decode-universal-time (+ *epoch-unixepoc-offset* (sb-ext:get-time-of-day)) 0)
+      (format nil "~4,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D-~2,'0D~a~a" y m d h min s suf suffix))))
 
