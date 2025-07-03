@@ -176,9 +176,10 @@
 (defun save-images-by-camera ()
   (with-open-file (fo "images-by-camera2.lsp" :direction :output :if-exists :supersede :if-does-not-exist :create)
 	(setf *images-by-camera* nil)
-	(maphash #'(lambda (k v)
+	(if *images-by-camera-hash*
+		(maphash #'(lambda (k v)
 				 (push (cons k v) *images-by-camera*))
-			 *images-by-camera-hash*)
+			 *images-by-camera-hash*))
 	(write *images-by-camera* :stream fo)))
 
 (defun bump-images-camera-count (camera count)
@@ -692,12 +693,15 @@
 (defun cleanup-one-camera (camera-directory)
   "Remove duplicates and similar images. To be done before items filed away"
   (with-open-log-file ("end-of-day-cleanup" :show-log-file-name t :dir `(:relative ,camera-directory))
-	(remove-duplicates-by-hash camera-directory)
-	(dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
-	  (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; 
-		(xlogntf "eodc: Going to ~s for deletion" newpn)
-		(remove-duplicates-by-hash newpn)))
-	(compare-directory camera-directory)))
+	(let ((*trace-output* (the-log-file)))
+	  (time
+	   (progn
+		 (remove-duplicates-by-hash camera-directory)
+		 (dolist (subdir (list "delete-similar" "delete-darkness" "marked-images" "bright" "delete-uninteresting-new" "delete-uninteresting"))
+		   (let ((newpn (make-pathname :directory (append (list :relative camera-directory) (list subdir))))) ;; 
+			 (xlogntf "eodc: Going to ~s for deletion" newpn)
+			 (remove-duplicates-by-hash newpn)))
+		 (compare-directory camera-directory))))))
 
 (defun cleanup-all-cameras (cams)
   "Remove dups and similars for all cameras"
@@ -988,20 +992,6 @@
 	(error (q)
 	  (xlogntft "pull-rwis barf on base ~s~% error ~s cameras ~s" base q *cameras-polled*))))
 
-(defun calc-path-not-really (fn-tokesa)
-  "For the Montana RWIS cameras"
-  (let* ((dir (first fn-tokesa))
-		 (fn-tokes (second fn-tokesa))
-
-		 (typ (car (last fn-tokes)))
-		 (newofn (format nil "~{~a-~}" (butlast fn-tokes)))
-		 (pfn (make-pathname 
-			   :directory  `(:relative ,dir)
-			   :name newofn
-			   :type typ)))
-	(break "fn-tokes ~s pfn ~s newofn ~s" fn-tokes pfn newofn)
-	pfn))
-
 (defun calc-path (fn-tokesa)
   "For the Montana RWIS cameras"
   (let* ((dir (first fn-tokesa))
@@ -1082,6 +1072,7 @@
 	(get-config-rescan (first dirx) :average)
 	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
 	  (pull-rwis (cons pfn (uri the-url))))
+	;; dirx is of the form ("Pendroy" ("301001" "01" "7" "3" "2025" "8" "45" "11" "jpg"))
 	(first dirx)))
 
 ;; (calc-dir-from-tokens (tokenize1 "Aberdeen-Hill-263004-00-3-26-2024-12-15-1.jpg" #\-))
@@ -1100,13 +1091,19 @@
 
 (defun find-images-new-home-page (lsp)
   (setf *collected-bits* nil) 
-  (let ((*print-pretty* nil))
+  (let ((*print-pretty* nil)
+		(cams nil))
 	(log-version-number "finhp")
 	(finhp lsp)
 	(setf *collected-bits* (ashuffle *collected-bits*))
-	(dolist (cb *collected-bits*)
-	  (let ((image (pull-new-rwis-image cb)))
-		(bump-images-camera-count image 1)))) 
+	(with-open-file (fo (format nil "~a-rwis-cameras.out" (dates-ymd :ymd)  )  :direction :output :if-exists :supersede :if-does-not-exist :create)
+	  (dolist (cb *collected-bits*)
+		(let ((image (pull-new-rwis-image cb)))
+		  (bump-images-camera-count image 1)
+		  (pushnew image cams :test 'equal)))
+	  (mapc #'(lambda (i)
+				(write-line i  fo))
+			(sort cams 'string<)))) 
   (save-collected-bits))
 
 (defun find-time-gaps-c (arg)
@@ -1116,13 +1113,9 @@
 			  arg)))
 	(find-time-gaps argx *time-gaps*)))
 
-(defun compare-directory-new (arg)
-  (cond ((null arg)
-		 (compare-directory *directory*))
-		(t (xlogntf "compare-directory-new: unrecognized args, processing halted ~s" arg))))
-
 (defun compare-directory ( &optional (dir "Pendroy/2024/05/30/") ) 
-  "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30"
+  "This compares files from a leaf directory in the full image tree: e.g., for daily saved images at ...pendroy/2020/05/30, we are looking at the *.jpg in 30.
+   Typical processing time is on the order of 20 seconds for each camera. One day took 43 minutes."
   (let* ((sure-directory (uiop:ensure-directory-pathname dir))
 		 (full-dir-namestring (namestring sure-directory))
 		 (sameness-threshold (init-compare dir)))
@@ -1132,29 +1125,30 @@
 							 :dir (pathname-directory sure-directory)) 
 		  (let ((*trace-output* (the-log-file))
 				(*error-output* (the-log-file)))
-			(progn
-			  (xlogft "compare-directory ~a" (version-number-string "cd"))
-			  (let* ((full (sort (directory (concatenate 'string full-dir-namestring "/*.jpg")) 
-								 'string<  :key #'(lambda (s)
-													(file-namestring s))))
-					 (top (car full)))
-				(xlogntf "cd: we have ~a images to check" (length full))
-				(if (and sameness-threshold (plusp sameness-threshold))
-					(dolist  (ni  (cdr full))
-					  (handler-case
-						  (compare-images top ni)
-						(error (e)
-						  (incf *errors-encountered*)
-						  (move-file-to-delete top "broken-images")
-						  (xlogntf "cd: on image ~a, skipping~%error: ~a" top e)))
-					  (setf top ni))))
-			  (debugc 5 (xlogntf "delete: ~a" *delete-these-files*))
-			  (delete-files-from-list *delete-these-files* )
-			  (xlogntft "~a images viewed ~a images deleted ratio ~6,2,f" 
-						*images-viewed* *similar-images-deleted* 
-						(if (plusp *images-viewed*)
-							(/ (* 100.0 *similar-images-deleted*) *images-viewed*)
-							0.0)))))
+			(time
+			 (progn
+			   (xlogft "compare-directory ~a" (version-number-string "cd"))
+			   (let* ((full (sort (directory (concatenate 'string full-dir-namestring "/*.jpg")) 
+								  'string<  :key #'(lambda (s)
+													 (file-namestring s))))
+					  (top (car full)))
+				 (xlogntf "cd: we have ~a images to check" (length full))
+				 (if (and sameness-threshold (plusp sameness-threshold))
+					 (dolist  (ni  (cdr full))
+					   (handler-case
+						   (compare-images top ni)
+						 (error (e)
+						   (incf *errors-encountered*)
+						   (move-file-to-delete top "broken-images")
+						   (xlogntf "cd: on image ~a, skipping~%error: ~a" top e)))
+					   (setf top ni))))
+			   (debugc 5 (xlogntf "delete: ~a" *delete-these-files*))
+			   (delete-files-from-list *delete-these-files* )
+			   (xlogntft "~a images viewed ~a images deleted ratio ~6,2,f" 
+						 *images-viewed* *similar-images-deleted* 
+						 (if (plusp *images-viewed*)
+							 (/ (* 100.0 *similar-images-deleted*) *images-viewed*)
+							 0.0))))))
 		(xlogntf "cd: no threshold (~s, plusp ~s), saving time" sameness-threshold 
 				 (if sameness-threshold
 					 (plusp sameness-threshold)
