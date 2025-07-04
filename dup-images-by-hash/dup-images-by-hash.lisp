@@ -129,7 +129,7 @@
 	
 	(let ((ans (exam-hashes-for-dupe)))
 	  (if (plusp ans)
-		  (xlogntf "rdbh: Deleted ~a out of ~a images from ~a" ans (length all-files) cl))
+		  (xlogntft "rdbh: Deleted ~a out of ~a images from ~a" ans (length all-files) cl))
 	  ans)))
 
 (defun remove-log-duplicates-by-hash (dir)
