@@ -104,14 +104,14 @@
 	list-of-clusters))
 
 (defun draw-grid-maybe (width height new-image)
-  (when *draw-grid*)
-  (let ((xincr (floor (/ width 10)))
-		(yincr (floor (/ height 10))))
-	(xlogntf "dgm: xincr ~a yincr ~a" xincr yincr)
-	(dotimes (xx 10)
-	  (draw-line (* xx xincr ) 0 (* xx xincr) height :color (* 8 500) :image new-image))
-	(dotimes (yy 10)
-	  (draw-line 0 (* yy yincr) width (*  yy yincr) :color (* 8 500) :image new-image))))
+  (when *draw-grid*
+	(let ((xincr (floor (/ width 10)))
+		  (yincr (floor (/ height 10))))
+	  (xlogntf "dgm: xincr ~a yincr ~a" xincr yincr)
+	  (dotimes (xx 10)
+		(draw-line (* xx xincr ) 0 (* xx xincr) height :color (* 8 500) :image new-image))
+	  (dotimes (yy 10)
+		(draw-line 0 (* yy yincr) width (*  yy yincr) :color (* 8 500) :image new-image)))))
 
 (defun floor3 (pix)
   (floor (/ (+ (ldb (byte 8 16) pix) (ldb (byte 8 8) pix) (ldb (byte 8 0) pix)) 3.0)))
@@ -369,8 +369,8 @@
 			   (+ (- brightness-diff-thresh hcount) bx)
 			   cluster-limit overlap-thresh))))))))
 
-(defun detect-stars-in-file-test (longfn)
-  (setf *draw-grid* nil)
+(defun detect-stars-in-file-test (longfn &optional (grid nil))
+  (setf *draw-grid* grid)
   (detect-stars-in-file (directory-namestring longfn) longfn) )
 
 (defun detect-stars (dir)
