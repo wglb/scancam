@@ -25,7 +25,7 @@
 			   #:local-time
 			   #:dex-get)
     
-  :version "2.20.1"
+  :version "2.20.2"
   :components ((:file "scancam-package")
 			   (:file "globals")
 			   (:file "scancam-tools")

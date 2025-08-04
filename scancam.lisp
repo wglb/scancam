@@ -527,7 +527,8 @@
   (xlogntft "t3: ~s ~s" alternate-log-file-name run-rwis)
   (setf *all-config-files* nil)
   (restore-config-file-list)
-  (let ((rv t))
+  (let ((rv t)
+		(time-to-delete nil))
 	(with-open-log-file ((if alternate-log-file-name
 							 alternate-log-file-name
 							 "try3")
@@ -544,7 +545,8 @@
 			   (cond ((or (time-to-run) run-rwis)
 					  (setf *images-by-camera-hash* nil) ;; clear if we are running everything
 					  (get-wh-marina) ;; let's calibrate the interval 
-					  (try-pendroy-new))
+					  (try-pendroy-new)
+					  (setf time-to-delete t))
 
 					 (t ;; we are only running non-rwis
 					  (restore-images-by-camera)))
@@ -568,7 +570,7 @@
 			(t 
 			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
 			 (setf rv nil)))
-	  (when (or (time-to-run) run-rwis)
+	  (when (or (time-to-run) run-rwis time-to-delete)
 		(do-we-need-to-delete-duplicates *images-by-camera*))
 	  
 	  (save-config-file-list))
