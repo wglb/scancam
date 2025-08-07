@@ -571,8 +571,13 @@
 			 (xalertf "t3: ~a Lock file in place!! ~a ~a" "▁██████"  (formatted-file-time "scancam,lck") (version-number-string "t3"))
 			 (setf rv nil)))
 	  (when (or (time-to-run) run-rwis time-to-delete)
-		(do-we-need-to-delete-duplicates *images-by-camera*))
-	  
+		(cond ((lockme "scancam-delete")
+			   (do-we-need-to-delete-duplicates *images-by-camera*)
+			   (unlockme "scancam-delete"))
+			  (t
+			   (xalertf "t3: ~a Delete Lock file in place!! ~a ~a" "▁██████"
+						(formatted-file-time "scancam,lck") (version-number-string "t3")))))
+	  	  
 	  (save-config-file-list))
 	(xlogf "t3: done ~a" (version-number-string "try-three"))
 	(xlogntf "t3: img=~a drk=~a dup-rm=~a sim=~a cams=~a err=~a star=~a borg=~a v~a"
