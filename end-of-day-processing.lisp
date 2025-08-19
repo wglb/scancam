@@ -24,10 +24,10 @@
 (defun cleanup-all-cameras (cams)
   "Remove dups and similars for all cameras"
   (xlogntf "cac: there are ~a cameras to process" (length cams))
+  (file-away-auxiliary-mass cams)
   (mapc #'(lambda (camera-directory)
 			(cleanup-one-camera (car camera-directory)))
-		cams)
-  (file-away-auxiliary-mass cams))
+		cams))
 
 (defun test-cleanup-all-cameras (cams)
   "Remove dups and similars for all cameras"
