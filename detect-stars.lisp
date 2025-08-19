@@ -385,6 +385,8 @@
 		(work-find-bright-spots lx delt brightness-diff-thresh cluster-limit overlap-thresh))
 	  (xlogntft "ds: ~a star images tagged " *astronomy-images-found*))))
 
+
+
 	  ;; Exclusions these hits: /home/data6/webcams/pendroy/scancam/Aberdeen-Hill-I-90-MP-552_3/delete-darkness/marked-images/exclude/
 	  ;; /home/data6/webcams/pendroy/scancam/Rock-Springs-MT59-MP36_5/delete-darkness/marked-images/Vid-000563002-00-00-2020-08-31-09-39_8-150-circle.jpg
 	  ;; /home/data6/webcams/pendroy/scancam/Rock-Springs-MT59-MP36_5/delete-darkness/marked-images/exclusion/
@@ -466,3 +468,86 @@
   (subseq (file-namestring #P"/home/data6/webcams/pendroy/scancam/Boulder-Hill-I-15-MP-170_9/delete-darkness/exclude/Vid-000267003-00-00-2020-08-15-04-41_8-150-circle.jpg") 0 36)
   (with-open-log-file ("locate-mark-files-from-lst" :append-or-replace :supersede)
 	(locate-mark-files-from-lst  "./Boulder-Hill-I-15-MP-170_9/delete-darkness/exclude/" )))
+
+(defun test-circular-gradient (img x y radius brightness-diff-thresh)
+  "Tests for a circular gradient by comparing the center pixel to the average
+   brightness of pixels in a ring around it."
+  (let ((center-brightness (brightness-f img x y))
+        (ring-pixels-sum 0)
+        (ring-pixels-count 0))
+
+    ;; Loop through a square region around the center point
+    (loop for i from (- x radius) to (+ x radius)
+          do (loop for j from (- y radius) to (+ y radius)
+                   do (let ((dist (distance i j x y)))
+                        ;; Check if the point (i,j) is within the defined ring
+                        (when (and (>= dist (- radius 1))
+                                   (< dist (+ radius 1)))
+                          (incf ring-pixels-sum (brightness-f img i j))
+                          (incf ring-pixels-count)))))
+    
+    (when (> ring-pixels-count 0)
+      (let ((average-ring-brightness (/ ring-pixels-sum ring-pixels-count)))
+        (let ((brightness-difference (- center-brightness average-ring-brightness)))
+          ;; Check if the center is significantly brighter than the ring
+          (if (> brightness-difference brightness-diff-thresh)
+              (progn
+                (xlogntf "Found star candidate at (~a, ~a) with difference ~a" x y brightness-difference)
+                T) ;; Return true if it's a star candidate
+              NIL))))))
+
+(defun find-bright-spots-int-mod (img width height delt brightness-diff-thresh)
+  (let ((hits nil))
+	(dotimes (x width)
+	  (dotimes (y height)
+		(when (test-circular-gradient img x y delt brightness-diff-thresh)
+		  (push (list x y (brightness-f img x y)) hits))))))
+
+#+nil (defun make-gaussian-kernel (radius sigma)
+  "Generates a square Gaussian kernel of size (2*radius + 1) x (2*radius + 1)."
+  (let* ((size (+ (* 2 radius) 1))
+         (kernel (make-array (list size size) :element-type 'single-float))
+         (sigma2 (* sigma sigma))
+         (sum 0.0))
+    (dotimes (i size)
+      (dotimes (j size)
+        (let* ((x (- i radius))
+               (y (- j radius))
+               (value (/ (exp (- (/ (+ (* x x) (* y y)) (* 2 sigma2))))
+                         (* 2 pi sigma2))))
+          (setf (aref kernel i j) value)
+          (incf sum value))))
+
+    ;; Normalize the kernel so the sum of all elements is 1
+    (dotimes (i size)
+      (dotimes (j size)
+        (setf (aref kernel i j) (/ (aref kernel i j) sum))))
+    kernel))
+
+#|This code snippet assumes the existence of functions like image-size, make-image, set-pixel, and brightness-f. The 
+brightness-f function from your original code would be suitable here for getting the brightness of a pixel. You'll need to adapt the 
+set-pixel function to work with grayscale values.
+Using these two functions together, you can easily apply a Gaussian blur to your roadside camera images to reduce noise before proceeding with other detection algorithms.
+|#
+#+nil (defun apply-gaussian-filter (img radius sigma)
+  "Applies a Gaussian blur filter to the given image."
+  (multiple-value-bind (width height)
+      (image-size img)
+    (let* ((kernel (make-gaussian-kernel radius sigma))
+           (new-image (make-image width height :type :grayscale)))
+      (dotimes (x width)
+        (dotimes (y height)
+          (let ((new-brightness 0.0))
+            ;; Convolve the kernel with the image
+            (loop for i from (- radius) to radius
+                  do (loop for j from (- radius) to radius
+                           do (let* ((img-x (+ x i))
+                                     (img-y (+ y j)))
+                                (when (and (>= img-x 0) (< img-x width)
+                                           (>= img-y 0) (< img-y height))
+                                  (incf new-brightness
+                                        (* (aref kernel (+ i radius) (+ j radius))
+                                           (brightness-f img img-x img-y)))))))
+            ;; Set the new pixel value
+            (set-pixel x y new-brightness :image new-image))))
+      new-image)))
