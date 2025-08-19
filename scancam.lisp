@@ -673,15 +673,16 @@
   (with-open-log-file ((format nil "f-away-dir-~a" (slashes-to-hyphens the-dir))
 					   :dir  (list :relative (car (last (pathname-directory (uiop:ensure-directory-pathname the-dir)))))
 					   :show-log-file-name t)
-	(let ((to-file-p (get-config-rescan the-dir :file-away)))
-	  (xlogntf "fad: to file or not ~s" to-file-p)
-	  (cond ((eq to-file-p :true)
-			 (log-version-number "file-away")
-			 (xlogntf "fad: directory is ~s fdir is ~a " the-dir the-dir )
-			 (file-away-list (file-away-flist the-dir)))
-			  
-			(t 
-			 (xlogntf "fad: not to file these for ~a" the-dir))))))
+	(if (probe-file the-dir)
+		(let ((to-file-p (get-config-rescan the-dir :file-away)))
+		  (xlogntf "fad: to file or not ~s" to-file-p)
+		  (cond ((eq to-file-p :true)
+				 (log-version-number "file-away")
+				 (xlogntf "fad: directory is ~s fdir is ~a " the-dir the-dir )
+				 (file-away-list (file-away-flist the-dir)))
+				
+				(t 
+				 (xlogntf "fad: not to file these for ~a" the-dir)))))))
 
 (defun file-away-auxiliary (camera-directory)
   "File away contents of major directory and sub directories"
