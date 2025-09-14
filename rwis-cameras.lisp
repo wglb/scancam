@@ -57,7 +57,7 @@
 				#+nil (tokenize1 (file-namestring path) #\-))
 		 (dirx (calc-dir-from-tokens tokes))
 		 (pfn (calc-path dirx)))
-	
+	(ensure-directories-exist pfn)
 	(get-config-rescan (first dirx) :average)
 	(with-open-log-file ((format nil "~a-~a" (first dirx) "rwis") :dir `(:relative ,(first dirx)))
 	  (pull-rwis (cons pfn (uri the-url))))
